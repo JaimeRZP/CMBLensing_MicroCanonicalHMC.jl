@@ -1,0 +1,4 @@
+name = "MCHMC"
+uuid = "92da4d09-9da0-4f8a-8b31-da41ef0ab6ee"
+authors = ["jaimerz <jaimerz011235813@gmail.com>"]
+version = "0.1.0"
