@@ -1,5 +1,8 @@
 module MCHMC
 
-greet() = print("Hello World!")
+using Interpolations, LinearAlgebra, Statistics, Random
 
-end # module
+include("sampler.jl")
+include("integrators.jl")
+
+end
