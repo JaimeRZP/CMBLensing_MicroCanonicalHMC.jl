@@ -28,6 +28,7 @@ end
 
 struct Sampler
     #TO DO: what types are these?
+    key::MersenneTwister
     settings::Settings
     target::Target
     hamiltonian_dynamics
@@ -51,23 +52,23 @@ function Sampler(sett::Settings, target::Target)
    return Sampler(sett, target, hamiltonian_dynamics, hyperparams)
 end
 
-function Random_unit_vector(sampler::Sampler, key):
+function Random_unit_vector(sampler::Sampler):
         """Generates a random (isotropic) unit vector."""
-        key, subkey = jax.random.split(key)
-        u = rand(subkey, shape = (self.Target.d, ), dtype = 'float64')
+        key = sampler.settings.key
+        u = rand(key, shape = (self.Target.d, ), dtype = 'float64')
         u /=. @.(sqrt(sum(square(u))))
-    return u, key
+    return u
 end
 
-function Partially_refresh_momentum(sampler::Sampler, u, key)
+function Partially_refresh_momentum(sampler::Sampler, u)
     """Adds a small noise to u and normalizes."""
     hyperparams = sampler.hyperparameters
     target = sampler.target
+    key = sampler.settings.key
 
-    #key, subkey = jax.random.split(key)
-    #z = hyperparams.nu * randn(subkey, shape = (target.d, ), dtype = 'float64')
+    z = hyperparams.nu * randn(key, shape = (target.d, ), dtype = 'float64')
     uu = @.((u + z) / sqrt(sum(square(u + z))))
-    return uu, key
+    return uu
 end
 
 function Update_momentum(sett:Settings g, u)
@@ -88,39 +89,37 @@ end
 function Dynamics(sampler::Sampler, state)
     """One step of the Langevin-like dynamics."""
 
-    x, u, g, key, time = state
+    x, u, g time = state
 
     # Hamiltonian step
     xx, gg, uu = sampler.hamiltonian_dynamics(x, g, u)
 
     # add noise to the momentum direction
-    uuu, key = Partially_refresh_momentum(uu, key)
+    uuu = Partially_refresh_momentum(uu)
 
-    return xx, uuu, gg, key, 0.0
+    return xx, uuu, gg, 0.0
 end
 
 function Get_initial_conditions(sampler::Sampler, kwargs...)
     kwargs = Dict(kwargs)
     target = Sampler.target
-    ### random key ###
-    key = get(kwargs, random_key, jax.random.PRNGKey(0))
-    key, prior_key = jax.random.split(key)
+    sett = sampler.settings
     ### initial conditions ###
-    x = get(kwargs, initial_x, target.prior_draw(prior_key))
+    x = get(kwargs, initial_x, target.prior_draw(sett.key))
 
     g = @.(target.grad_nlogp(x) * target.d / (target.d - 1))
 
-    u, key = Random_unit_vector(key) #random initial direction
+    u = Random_unit_vector(sett.key) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 
-    return x, u, g, key
+    return x, u, g
 
 function Step(sampler::Sampler, state)
     """Tracks transform(x) as a function of number of iterations"""
 
-    x, u, g, key, time = Dynamics(sampler, state)
+    x, u, g, time = Dynamics(sampler, state)
 
-    return [x, u, g, key, time, sampler.target.transform(x)]
+    return [x, u, g, time, sampler.target.transform(x)]
 end
 
 function Sample(sampler::Sampler, kwargs...)
@@ -131,7 +130,6 @@ function Sample(sampler::Sampler, kwargs...)
             Returns:
                 samples (shape = (num_steps, self.Target.d))
     """
-    x, u, g, key = Get_initial_conditions(kwargs[:x_initial], kwargs[:x_initial])
-    chain = [Step(x, u, g, key, 0.0) for i in 1:kwargs[:num_steps]]
-    return chain
+    x, u, g = Get_initial_conditions(kwargs[:x_initial], kwargs[:x_initial])
+    return [Step(x, u, g, 0.0) for i in 1:kwargs[:num_steps]]
 end

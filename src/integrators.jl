@@ -9,7 +9,7 @@ function Leapfrog(sampler::Sampler, target::Target,  x, g, u) <: Integrator
 
     #full step in x
     xx = x + set.eps * uu
-    gg = target.grad_nlogp(xx) * target.d / (target.d - 1)
+    gg = @.(target.grad_nlogp(xx) * target.d / (target.d - 1)
 
     #half step in momentum
     uu = Update_momentum(sett.eps * 0.5, gg, uu)
