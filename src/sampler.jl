@@ -6,14 +6,6 @@ struct Settings
     integrator::String
 end
 
-struct Target
-    #TO DO: what types are these?
-    prior_draw
-    transform
-    grap_nlogp
-    d
-end
-
 struct Hyperparameters
     #TO DO: what types are these?
     L
