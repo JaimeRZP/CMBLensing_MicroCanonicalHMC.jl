@@ -20,7 +20,7 @@ function StandardGaussianTarget(;...kwargs)
         return x
     end
     function prior_draw(key, x)
-        return rand(Normal(key, shape = (self.d, ), dtype = 'float64')
+        return rand(MvNormal())
     end
     StandardGaussianTarget(kwargs[:d],
                            ones(d),
