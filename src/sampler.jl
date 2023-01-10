@@ -112,14 +112,14 @@ function Get_initial_conditions(sampler::Sampler, kwargs...)
     u = Random_unit_vector(sett.key) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 
-    return x, u, g
+    return [x, u, g, 0.0]
 
 function Step(sampler::Sampler, state)
     """Tracks transform(x) as a function of number of iterations"""
 
     x, u, g, time = Dynamics(sampler, state)
 
-    return [x, u, g, time, sampler.target.transform(x)]
+    return [x, u, g, time], sampler.target.transform(x)
 end
 
 function Sample(sampler::Sampler, kwargs...)
@@ -130,6 +130,11 @@ function Sample(sampler::Sampler, kwargs...)
             Returns:
                 samples (shape = (num_steps, self.Target.d))
     """
-    x, u, g = Get_initial_conditions(kwargs[:x_initial], kwargs[:x_initial])
-    return [Step(x, u, g, 0.0) for i in 1:kwargs[:num_steps]]
+    init = Get_initial_conditions(sampler; kwargs...)
+    samples = zeros(Vector{Vector{eltype(x)}}, kwargs[:num_steps])
+    for i in 1:kwargs[:num_steps]
+        init, sample = Step(init)
+        samples[i] = sample
+
+    return samples
 end
