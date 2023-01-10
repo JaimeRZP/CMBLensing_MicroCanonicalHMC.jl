@@ -10,18 +10,25 @@ struct StandardGaussianTarget <: Target
 end
 
 function StandardGaussianTarget(;...kwargs)
+
     function nlogp(x)
         return 0.5 * sum(square.(x))
     end
+
     function grad_nlogp(x)
         return x
     end
+
     function transform(x)
         return x
     end
-    function prior_draw(key, x)
-        return rand(MvNormal())
+
+    function prior_draw(key)
+        mean = zeros(d)
+        variance = ones(d)
+        return rand(MvNormal(mean, variance), 1)
     end
+
     StandardGaussianTarget(kwargs[:d],
                            ones(d),
                            nlogp,
