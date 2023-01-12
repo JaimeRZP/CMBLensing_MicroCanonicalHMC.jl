@@ -17,7 +17,7 @@ function StandardGaussianTarget(; kwargs...)
     end
 
     function grad_nlogp(x)
-        return x #ForwardDiff.gradient(nlogp, x)
+        return ForwardDiff.gradient(nlogp, x)
     end
 
     function transform(x)
@@ -27,7 +27,7 @@ function StandardGaussianTarget(; kwargs...)
     function prior_draw(key)
         mean = zeros(d)
         variance = ones(d)
-        return 4*vec(rand(MvNormal(mean, variance), 1))
+        return 4*rand(key, MvNormal(mean, variance))
     end
 
     StandardGaussianTarget(kwargs[:d],
