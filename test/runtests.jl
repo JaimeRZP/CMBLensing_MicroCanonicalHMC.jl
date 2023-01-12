@@ -1,7 +1,5 @@
 using Test
-using GaussianProcess
-using Distances
-using LinearAlgebra
+using MCHMC
 
 @testset "All tests" begin
     
