@@ -1,5 +1,4 @@
 function Leapfrog(sampler::Sampler, x, g, u)
-    #TO DO: type the inputs
     sett = sampler.settings
     target = sampler.target
 
