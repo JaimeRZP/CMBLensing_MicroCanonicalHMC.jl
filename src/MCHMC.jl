@@ -1,6 +1,10 @@
 module MCHMC
 
-using Interpolations, LinearAlgebra, Statistics,
+export Settings, Hyperparameters, Sampler, Sample
+export Leapfrog, Minimal_norm
+export StandardGaussianTarget
+
+using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random
 
 include("sampler.jl")

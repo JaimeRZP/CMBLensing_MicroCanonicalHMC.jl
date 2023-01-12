@@ -18,7 +18,7 @@ function Leapfrog(sampler::Sampler, target::Target,  x, g, u) <: Integrator
 end
 
 
-function minimal_norm(sampler::Sampler, x, g, u) <: Integrator
+function Minimal_norm(sampler::Sampler, x, g, u) <: Integrator
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
 
     # V T V T V
