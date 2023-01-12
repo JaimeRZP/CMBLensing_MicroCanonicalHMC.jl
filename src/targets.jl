@@ -3,7 +3,7 @@ struct StandardGaussianTarget <: Target
     d::Int
     variance::Vector{Float64}
     nlogp
-    grap_nlogp
+    grad_nlogp
     transform
     prior_draw
 end
@@ -27,7 +27,7 @@ function StandardGaussianTarget(; kwargs...)
     function prior_draw(key)
         mean = zeros(d)
         variance = ones(d)
-        return rand(MvNormal(mean, variance), 1)
+        return vec(rand(MvNormal(mean, variance), 1))
     end
 
     StandardGaussianTarget(kwargs[:d],
