@@ -7,8 +7,12 @@ export StandardGaussianTarget
 using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random
 
+abstract type Integrator end
+abstract type Target end
+
 include("sampler.jl")
-include("integrators.jl")
 include("targets.jl")
+include("integrators.jl")
+
 
 end
