@@ -16,18 +16,17 @@ function Settings(eps, L; kwargs...)
 end
 
 struct Hyperparameters
-    #TO DO: what types are these?
-    L
-    eps
-    nu
+    L::Float64
+    eps::Float64
+    nu::Float64
 end
 
 function Hyperparameters(sett::Settings, target::Target)
-    nu = @.(sqrt((exp(2 * sett.eps / sett.L) - 1.0) / target.d))
+    nu = sqrt((exp(2 * sett.eps / sett.L) - 1.0) / target.d)
     return Hyperparameters(sett.L, sett.eps, nu)
 end
 
-struct Sampler <: Sampler
+struct Sampler
     #TO DO: what types are these?
     settings::Settings
     target::Target
@@ -63,7 +62,8 @@ function Random_unit_vector(sampler::Sampler)
     """Generates a random (isotropic) unit vector."""
     key = sampler.settings.key
     u = randn(key, sampler.target.d)
-    return  @.(u / sqrt(sum(u.^2)))
+    u ./=  sqrt.(sum(u.^2))
+    return  u
 
 end
 
