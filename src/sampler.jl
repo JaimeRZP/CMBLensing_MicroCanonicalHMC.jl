@@ -1,5 +1,6 @@
 
 struct Settings
+    key::MersenneTwister
     lambda_c::Float64
     eps::Float64
     L::Float64
@@ -20,19 +21,18 @@ end
 
 struct Sampler
     #TO DO: what types are these?
-    key::MersenneTwister
     settings::Settings
     target::Target
-    hamiltonian_dynamics::Integrator
+    hamiltonian_dynamics
     hyperparameters::Hyperparameters
 end
 
 function Sampler(sett::Settings, target::Target)
 
-    if integrator == "LF"  # leapfrog
+    if sett.integrator == "LF"  # leapfrog
         hamiltonian_dynamics = Leapfrog
         grad_evals_per_step = 1.0
-    elseif integrator == "MN"  # minimal norm integrator
+    elseif sett.integrator == "MN"  # minimal norm integrator
         hamiltonian_dynamics = Minimal_norm
         grad_evals_per_step = 2.0
     else
@@ -41,7 +41,17 @@ function Sampler(sett::Settings, target::Target)
 
     hyperparams = Hyperparameters(sett, target)
 
-   return Sampler(sett, target, hamiltonian_dynamics, hyperparams)
+    return Sampler(sett, target, hamiltonian_dynamics, hyperparams)
+end
+
+function Sampler(target::Target)
+    key = MersenneTwister(0)
+    lambda_c = 0.1931833275037836
+    eps=5.0
+    L=sqrt.(target.d)
+    integrator = "LF"
+    sett = Settings(key, lambda_c, eps, L, integrator)
+    return Sampler(sett, target)
 end
 
 function Random_unit_vector(sampler::Sampler)
@@ -92,9 +102,9 @@ function Dynamics(sampler::Sampler, state)
     return xx, uuu, gg, 0.0
 end
 
-function Get_initial_conditions(sampler::Sampler, kwargs...)
+function Get_initial_conditions(sampler::Sampler; kwargs...)
     kwargs = Dict(kwargs)
-    target = Sampler.target
+    target = sampler.target
     sett = sampler.settings
     ### initial conditions ###
     x = get(kwargs, initial_x, target.prior_draw(sett.key))
@@ -115,7 +125,7 @@ function Step(sampler::Sampler, state)
     return [x, u, g, time], sampler.target.transform(x)
 end
 
-function Sample(sampler::Sampler, kwargs...)
+function Sample(sampler::Sampler; kwargs...)
     """Args:
                num_steps: number of integration steps to take.
                x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).

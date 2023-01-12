@@ -2,12 +2,15 @@ struct StandardGaussianTarget <: Target
     #TO DO: what types are these?
     d::Int
     variance::Vector{Float64}
-    prior_draw
-    transform
+    nlogp
     grap_nlogp
+    transform
+    prior_draw
 end
 
 function StandardGaussianTarget(; kwargs...)
+
+    d = kwargs[:d]
 
     function nlogp(x)
         return 0.5 * sum(square.(x))
