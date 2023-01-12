@@ -7,6 +7,14 @@ struct Settings
     integrator::String
 end
 
+function Settings(eps, L; kwargs...)
+    seed = get(kwargs, :seed, 0)
+    key = MersenneTwister(seed)
+    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
+    integrator = get(kwargs, :integrator, "LF")
+    sett = Settings(key, lambda_c, eps, L, integrator)
+end
+
 struct Hyperparameters
     #TO DO: what types are these?
     L
@@ -14,12 +22,12 @@ struct Hyperparameters
     nu
 end
 
-function Hyperparameters(sett::Settings, target)
+function Hyperparameters(sett::Settings, target::Target)
     nu = @.(sqrt((exp(2 * sett.eps / sett.L) - 1.0) / target.d))
     return Hyperparameters(sett.L, sett.eps, nu)
 end
 
-struct Sampler
+struct Sampler <: Sampler
     #TO DO: what types are these?
     settings::Settings
     target::Target
@@ -45,12 +53,9 @@ function Sampler(sett::Settings, target::Target)
 end
 
 function Sampler(target::Target)
-    key = MersenneTwister(0)
-    lambda_c = 0.1931833275037836
     eps=5.0
     L=sqrt.(target.d)
-    integrator = "LF"
-    sett = Settings(key, lambda_c, eps, L, integrator)
+    sett = Settings(eps, L)
     return Sampler(sett, target)
 end
 
@@ -107,9 +112,7 @@ function Get_initial_conditions(sampler::Sampler; kwargs...)
     sett = sampler.settings
     ### initial conditions ###
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
-
-    g = @.(target.grad_nlogp(x) * target.d / (target.d - 1))
-
+    g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 

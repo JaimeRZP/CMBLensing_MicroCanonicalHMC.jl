@@ -6,8 +6,8 @@ function Leapfrog(sampler::Sampler, x, g, u)
     uu = Update_momentum(sampler, sett.eps * 0.5, g, u)
 
     #full step in x
-    xx = x + sett.eps * uu
-    gg = @.(target.grad_nlogp(xx) * target.d / (target.d - 1))
+    xx = x .+ sett.eps .* uu
+    gg = target.grad_nlogp(xx) .* target.d ./ (target.d - 1)
 
     #half step in momentum
     uu = Update_momentum(sampler, sett.eps * 0.5, gg, uu)
