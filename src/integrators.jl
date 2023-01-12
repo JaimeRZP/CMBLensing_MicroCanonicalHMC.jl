@@ -28,7 +28,7 @@ function Minimal_norm(sampler::Sampler, x, g, u)
     xx = @.(x + sett.eps * 0.5 * uu)
     gg = @.(target.grad_nlogp(xx) * target.d / (target.d - 1))
 
-    uu = Update_momentum(sampler, sett.eps .* (1 .- 2 .* sett.lambda_c), gg, uu)
+    uu = Update_momentum(sampler, sett.eps * (1 - 2 * sett.lambda_c), gg, uu)
 
     xx = @.(xx + self.eps * 0.5 * uu)
     gg = @.(target.grad_nlogp(xx) * self.Target.d / (self.Target.d - 1))
