@@ -13,7 +13,7 @@ struct Hyperparameters
     nu
 end
 
-function Hyperparameters(sett::Settings, target::Target)
+function Hyperparameters(sett::Settings, target)
     nu = @.(sqrt((exp(2 * sett.eps / sett.L) - 1.0) / target.d))
     return Hyperparameters(sett.L, sett.eps, nu)
 end
@@ -23,7 +23,7 @@ struct Sampler
     key::MersenneTwister
     settings::Settings
     target::Target
-    hamiltonian_dynamics
+    hamiltonian_dynamics::Integrator
     hyperparameters::Hyperparameters
 end
 
@@ -36,7 +36,7 @@ function Sampler(sett::Settings, target::Target)
         hamiltonian_dynamics = Minimal_norm
         grad_evals_per_step = 2.0
     else
-        println('integrator = ' + integrator + 'is not a valid option.')
+        println(string("integrator = ", integrator, "is not a valid option."))
     end
 
     hyperparams = Hyperparameters(sett, target)
@@ -44,12 +44,12 @@ function Sampler(sett::Settings, target::Target)
    return Sampler(sett, target, hamiltonian_dynamics, hyperparams)
 end
 
-function Random_unit_vector(sampler::Sampler):
-        """Generates a random (isotropic) unit vector."""
-        key = sampler.settings.key
-        u = rand(key, shape = (self.Target.d, ), dtype = 'float64')
-        u /=. @.(sqrt(sum(square(u))))
-    return u
+function Random_unit_vector(sampler::Sampler)
+    """Generates a random (isotropic) unit vector."""
+    key = sampler.settings.key
+    u = randn(key, sampler.target.d)
+    return  @.(u / sqrt(sum(square(u))))
+
 end
 
 function Partially_refresh_momentum(sampler::Sampler, u)
@@ -58,22 +58,22 @@ function Partially_refresh_momentum(sampler::Sampler, u)
     target = sampler.target
     key = sampler.settings.key
 
-    z = hyperparams.nu * randn(key, shape = (target.d, ), dtype = 'float64')
+    z = hyperparams.nu .* randn(key, sampler.target.d)
     uu = @.((u + z) / sqrt(sum(square(u + z))))
     return uu
 end
 
-function Update_momentum(sett:Settings g, u)
+function Update_momentum(sett::Settings, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
     eps = sett.eps
 
-    g_norm = sqrt.(sum(square.(g)))
-    e = -. g /. g_norm
+    g_norm = sqrt.(sum(g.^2))
+    e = .- g ./ g_norm
     ue = dot(u, e)
-    sh = sinh(eps * g_norm / target.d)
-    ch = cosh(eps * g_norm / target.d)
+    sh = sinh.(eps .* g_norm ./ target.d)
+    ch = cosh.(eps .* g_norm ./ target.d)
 
     return @.(u + e * (sh + ue * (ch - 1))) / (ch + ue * sh)
 end
@@ -81,7 +81,7 @@ end
 function Dynamics(sampler::Sampler, state)
     """One step of the Langevin-like dynamics."""
 
-    x, u, g time = state
+    x, u, g, time = state
 
     # Hamiltonian step
     xx, gg, uu = sampler.hamiltonian_dynamics(x, g, u)
@@ -105,6 +105,7 @@ function Get_initial_conditions(sampler::Sampler, kwargs...)
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 
     return [x, u, g, 0.0]
+end
 
 function Step(sampler::Sampler, state)
     """Tracks transform(x) as a function of number of iterations"""
@@ -127,6 +128,7 @@ function Sample(sampler::Sampler, kwargs...)
     for i in 1:kwargs[:num_steps]
         init, sample = Step(init)
         samples[i] = sample
+    end
 
     return samples
 end

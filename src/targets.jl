@@ -1,5 +1,3 @@
-abstract type Target end
-
 struct StandardGaussianTarget <: Target
     #TO DO: what types are these?
     d::Int
@@ -9,7 +7,7 @@ struct StandardGaussianTarget <: Target
     grap_nlogp
 end
 
-function StandardGaussianTarget(;...kwargs)
+function StandardGaussianTarget(; kwargs...)
 
     function nlogp(x)
         return 0.5 * sum(square.(x))
