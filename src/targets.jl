@@ -13,11 +13,11 @@ function StandardGaussianTarget(; kwargs...)
     d = kwargs[:d]
 
     function nlogp(x)
-        return 0.5 * sum(square.(x))
+        return 0.5 * sum(x.^2)
     end
 
     function grad_nlogp(x)
-        return x
+        return ForwardDiff.gradient(nlogp, x)
     end
 
     function transform(x)
