@@ -74,7 +74,7 @@ function Partially_refresh_momentum(sampler::Sampler, u)
     key = sampler.settings.key
 
     z = hyperparams.nu .* randn(key, sampler.target.d)
-    uu = @.((u + z) / sqrt(sum((u + z)^2)))
+    uu = (u .+ z) / sqrt.(sum((u .+ z).^2))
     return uu
 end
 
@@ -83,13 +83,13 @@ function Update_momentum(sampler::Sampler, eff_eps, g, u)
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
 
-    g_norm = sqrt.(sum(g.^2))
+    g_norm = sqrt.(sum(g .^2 ))
     e = - g ./ g_norm
     ue = dot(u, e)
-    sh = sinh.(eff_eps .* g_norm ./ sampler.target.d)
-    ch = cosh.(eff_eps .* g_norm ./ sampler.target.d)
+    sh = sinh.(eff_eps * g_norm ./ sampler.target.d)
+    ch = cosh.(eff_eps * g_norm ./ sampler.target.d)
 
-    return @.(u + e * (sh + ue * (ch - 1)) / (ch + ue * sh))
+    return @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
 end
 
 function Dynamics(sampler::Sampler, state)
