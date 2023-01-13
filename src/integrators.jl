@@ -24,15 +24,15 @@ function Minimal_norm(sampler::Sampler, x, g, u)
 
     uu = Update_momentum(sampler, sett.eps * sett.lambda_c, g, u)
 
-    xx = @.(x + sett.eps * 0.5 * uu)
-    gg = @.(target.grad_nlogp(xx) * target.d / (target.d - 1))
+    xx = x .+ sett.eps .* 0.5 .* uu
+    gg = target.grad_nlogp(xx) .* target.d ./ (target.d - 1)
 
     uu = Update_momentum(sampler, sett.eps * (1 - 2 * sett.lambda_c), gg, uu)
 
-    xx = @.(xx + self.eps * 0.5 * uu)
-    gg = @.(target.grad_nlogp(xx) * self.Target.d / (self.Target.d - 1))
+    xx = xx .+ sett.eps .* 0.5 .* uu
+    gg = target.grad_nlogp(xx) .* target.d / (target.d - 1)
 
-    uu = Update_momentum(sett.eps * sett.lambda_c, gg, uu)
+    uu = Update_momentum(sampler, sett.eps * sett.lambda_c, gg, uu)
 
     return xx, gg, uu
 end
