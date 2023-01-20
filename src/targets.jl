@@ -12,16 +12,13 @@ function _get_dists(vi)
 end
 
 TuringTarget(model; kwargs...) = begin
-    # Hack soon to be depricated
-    spl = DynamicPPL.SampleFromPrior()
-    ###
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, context)
     link!!(vi, model)
     vsyms = keys(vi)
     d = length(vsyms)
 
-    ℓ = LogDensityProblemsAD.ADgradient(Turing.LogDensityFunction(vi, model, spl, ctxt))
+    ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi, model, ctxt))
     ℓπ = Base.Fix1(LogDensityProblems.logdensity, ℓ)
     #OPT: we probably want to use this in the future.
     #     and merge nlogp and grad_nlogp into one function.
@@ -47,7 +44,7 @@ TuringTarget(model; kwargs...) = begin
         return vi[spl]
     end
 
-    TuringTarget(kwargs[:d],
+    TuringTarget(d,
                nlogp,
                grad_nlogp,
                transform,
@@ -100,8 +97,7 @@ struct CMBLensingTarget <: Target
 end
 
 CMBLensingTarget(prob; kwargs...) = begin
-
-    d = kwargs[:d]
+    d = length(prob.Ωstart)
     inv_Λmass = inv(Λmass)
 
     function nlogp(x)
@@ -120,7 +116,7 @@ CMBLensingTarget(prob; kwargs...) = begin
         return prob.Λmass * prob.Ωstart
     end
 
-    StandardGaussianTarget(kwargs[:d],
+    StandardGaussianTarget(d,
                            nlogp,
                            grad_nlogp,
                            transform,
