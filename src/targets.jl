@@ -13,8 +13,8 @@ end
 
 TuringTarget(model; kwargs...) = begin
     ctxt = model.context
-    vi = DynamicPPL.VarInfo(model, context)
-    link!!(vi, model)
+    vi = DynamicPPL.VarInfo(model, ctxt)
+    Turing.link!!(vi, model)
     vsyms = keys(vi)
     d = length(vsyms)
 
@@ -41,7 +41,7 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function prior_draw(key)
-        return vi[spl]
+        return vi[DynamicPPL.SampleFromPrior()]
     end
 
     TuringTarget(d,
