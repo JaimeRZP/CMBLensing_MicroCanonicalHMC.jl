@@ -2,7 +2,7 @@ module MCHMC
 
 export Settings, Hyperparameters, Sampler, Sample
 export Leapfrog, Minimal_norm
-export StandardGaussianTarget
+export TuringTarget, StandardGaussianTarget
 
 using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff
