@@ -6,6 +6,8 @@ export StandardGaussianTarget
 
 using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff
+using Turing, AbstractMCMC
+using LogDensityProblems, LogDensityProblemsAD
 
 abstract type Target end
 
