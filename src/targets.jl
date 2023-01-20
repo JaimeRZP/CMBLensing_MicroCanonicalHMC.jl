@@ -1,7 +1,5 @@
-struct Target <: Target
-    #TO DO: what types are these?
+struct TuringTarget <: Target
     d::Int
-    variance::Vector{Float64}
     nlogp::Function
     grad_nlogp::Function
     transform::Function
@@ -13,7 +11,7 @@ function _get_dists(vi)
     return [md.dists[1] for md in mds]
 end
 
-function TuringTarget(model; kwargs...)
+TuringTarget(model; kwargs...) = begin
     # Hack soon to be depricated
     spl = DynamicPPL.SampleFromPrior()
     ###
@@ -45,19 +43,26 @@ function TuringTarget(model; kwargs...)
         return xxs
     end
 
-    function prior_draw()
+    function prior_draw(key)
         return vi[spl]
     end
 
-    Target(kwargs[:d],
-           ones(d),
-           nlogp,
-           grad_nlogp,
-           transform,
-           prior_draw)
+    TuringTarget(kwargs[:d],
+               nlogp,
+               grad_nlogp,
+               transform,
+               prior_draw)
 end
 
-function StandardGaussianTarget(; kwargs...)
+struct StandardGaussianTarget <: Target
+    d::Int
+    nlogp::Function
+    grad_nlogp::Function
+    transform::Function
+    prior_draw::Function
+end
+
+StandardGaussianTarget(; kwargs...) = begin
 
     d = kwargs[:d]
 
@@ -79,10 +84,45 @@ function StandardGaussianTarget(; kwargs...)
         return 4*rand(key, MvNormal(mean, variance))
     end
 
-    Target(kwargs[:d],
-           ones(d),
-           nlogp,
-           grad_nlogp,
-           transform,
-           prior_draw)
+    StandardGaussianTarget(kwargs[:d],
+                           nlogp,
+                           grad_nlogp,
+                           transform,
+                           prior_draw)
+end
+
+struct CMBLensingTarget <: Target
+    d::Int
+    nlogp::Function
+    grad_nlogp::Function
+    transform::Function
+    prior_draw::Function
+end
+
+CMBLensingTarget(prob; kwargs...) = begin
+
+    d = kwargs[:d]
+    inv_Λmass = inv(Λmass)
+
+    function nlogp(x)
+        return prob()
+    end
+
+    function grad_nlogp(x)
+        return Zygote.gradient(prob, x)[1]
+    end
+
+    function transform(x)
+        return inv_Λmass * x
+    end
+
+    function prior_draw(key)
+        return prob.Λmass * prob.Ωstart
+    end
+
+    StandardGaussianTarget(kwargs[:d],
+                           nlogp,
+                           grad_nlogp,
+                           transform,
+                           prior_draw)
 end
