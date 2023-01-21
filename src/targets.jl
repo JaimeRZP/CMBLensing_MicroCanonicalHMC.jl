@@ -25,7 +25,7 @@ TuringTarget(model; kwargs...) = begin
     #∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
 
     function nlogp(x)
-        return ℓπ(x)
+        return -1.0 .* ℓπ(x)
     end
 
     function grad_nlogp(x)
@@ -42,6 +42,33 @@ TuringTarget(model; kwargs...) = begin
 
     function prior_draw(key)
         return vi[DynamicPPL.SampleFromPrior()]
+    end
+
+    TuringTarget(d,
+               nlogp,
+               grad_nlogp,
+               transform,
+               prior_draw)
+end
+
+struct CustomTarget <: Target
+    d::Int
+    nlogp::Function
+    grad_nlogp::Function
+    transform::Function
+    prior_draw::Function
+end
+
+CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
+    d = length(priors)
+
+    function transform(xs)
+        xxs = [invlink(dist, x) for (dist, x) in zip(priors, xs)]
+        return xxs
+    end
+
+    function prior_draw(key)
+        return [rand(key, dist) for dist in priors)]
     end
 
     TuringTarget(d,
