@@ -14,7 +14,7 @@ end
 TuringTarget(model; kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
-    #Turing.link!!(vi, model)
+    Turing.link!!(vi, model)
     vsyms = keys(vi)
     d = length(vsyms)
 
@@ -35,15 +35,15 @@ TuringTarget(model; kwargs...) = begin
         #return ∂lπ∂θ(x)[2]
     end
 
-    #function transform(xs)
-    #    dists = _get_dists(vi)
-    #    xxs = [invlink(dist, x) for (dist, x) in zip(dists, xs)]
-    #    return xxs
-    #end
-
-    function transform(x)
-        return x
+    function transform(xs)
+        dists = _get_dists(vi)
+        xxs = [invlink(dist, x) for (dist, x) in zip(dists, xs)]
+        return xxs
     end
+
+    #function transform(x)
+    #    return x
+    #end
 
     function prior_draw(key)
         return vi[DynamicPPL.SampleFromPrior()]
