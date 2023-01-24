@@ -8,7 +8,7 @@ mutable struct Settings
     tune_varE_wanted::Float64
     tune_burn_in::Float64
     tune_samples::Float64
-    tune_max_iter::Int
+    tune_maxiter::Int
     integrator::String
 end
 
@@ -27,7 +27,7 @@ function Settings(; kwargs...)
     integrator = get(kwargs, :integrator, "LF")
     sett = Settings(key,
                     eps, L, nu, lambda_c,
-                    tune_varE_wanted, turne_burn_in, tune_samples,
+                    tune_varE_wanted, tune_burn_in, tune_samples, tune_maxiter,
                     integrator)
 end
 
@@ -38,7 +38,7 @@ end
 
 function Sampler(;kwargs...)
 
-    sett = settings(kwargs)
+    sett = Settings(;kwargs...)
 
     if sett.integrator == "LF"  # leapfrog
         hamiltonian_dynamics = Leapfrog
@@ -96,7 +96,7 @@ function Dynamics(sampler::Sampler, target::Target, state)
     x, u, g, r, time = state
 
     # Hamiltonian step
-    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, x, g, u)
+    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, target, x, g, u, r)
 
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
@@ -104,30 +104,30 @@ function Dynamics(sampler::Sampler, target::Target, state)
     return xx, uuu, gg, rr, 0.0
 end
 
-function Get_initial_conditions(sampler::Sampler, target::Target)
+function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
+    kwargs = Dict(kwargs)
     ### initial conditions ###
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
-    u = Random_unit_vector(sampler) #random initial direction
+    u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
     r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
     return [x, u, g, r, 0.0]
 end
 
-function _set_hyperparameters(sampler::Sampler, target::Target)
-    satt = sampler.sett
-    eps = sett.eps
-    L = sett.L
+function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
+    eps = sampler.settings.eps
+    L = sampler.settings.L
     if [eps, L] == [0.0, 0.0]
         prinln("Self-tuning hyperparameters")
-        eps, L = tune_hyperparameters(sett, target)
+        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
     end
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
 
-    sett.eps = eps
-    sett.L = L
-    sett.nu = nu
+    sampler.settings.eps = eps
+    sampler.settings.L = L
+    sampler.settings.nu = nu
 end
 
 function Energy(target::Target, x, r)
