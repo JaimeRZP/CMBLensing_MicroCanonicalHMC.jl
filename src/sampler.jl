@@ -1,5 +1,5 @@
 
-struct mutable Settings
+mutable struct Settings
     key::MersenneTwister
     eps::Float64
     L::Float64
@@ -130,7 +130,7 @@ function _set_hyperparameters(sampler::Sampler, target::Target)
     sett.nu = nu
 end
 
-function Energy(target::Target, x, r):
+function Energy(target::Target, x, r)
     return target.d * r + target.nlogp(x)
 end
 

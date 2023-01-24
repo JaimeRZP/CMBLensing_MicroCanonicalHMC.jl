@@ -1,3 +1,4 @@
+#=
 function ess_corr(x)
     """Taken from: https://blackjax-devs.github.io/blackjax/diagnostics.html
         shape(x) = (num_samples, d)"""
@@ -19,12 +20,10 @@ function ess_corr(x)
     mean_autocov_var = autocov_value.mean(0, keepdims=True)
     mean_var0 = (jnp.take(mean_autocov_var, jnp.array([0]), axis=1) * num_samples / (num_samples - 1.0))
     weighted_var = mean_var0 * (num_samples - 1.0) / num_samples
-    weighted_var = jax.lax.cond(
-        num_chains > 1,
-        lambda _: weighted_var+ mean_across_chain.var(axis=0, ddof=1, keepdims=True),
-        lambda _: weighted_var,
-        operand=None,
-    )
+    weighted_var = jax.lax.cond(num_chains > 1,
+                                lambda _: weighted_var+ mean_across_chain.var(axis=0, ddof=1, keepdims=True),
+                                lambda _: weighted_var,
+                                operand=None)
 
     # Geyer's initial positive sequence
     num_samples_even = num_samples - num_samples % 2
@@ -84,9 +83,10 @@ function ess_corr(x)
     neff = ess.squeeze() / num_samples
     return 1.0 / jnp.average(1 / neff)
 end
+=#
 
-function _tuning_step(props)
-
+function _tuning_step(settings::Sampler, target::Target, props)
+    sett = sampler.settings
     eps_inappropriate, eps_appropriate, success = props
 
     # get a small number of samples
@@ -104,51 +104,49 @@ function _tuning_step(props)
     ### compute quantities of interest ###
 
     # typical size of the posterior
-    x1 = jnp.average(X, axis= 0) #first moments
-    x2 = jnp.average(jnp.square(X), axis=0) #second moments
-    sigma = jnp.sqrt(jnp.average(x2 - jnp.square(x1))) #average variance over the dimensions
+    x1 = mean(X, axis= 0) #first moments
+    x2 = mean(square.(X), axis=0) #second moments
+    sigma = sqrt.(mean(x2 - square.(x1))) #average variance over the dimensions
 
     # energy fluctuations
-    varE = jnp.std(E)**2 / self.Target.d #variance per dimension
-    no_divergences = np.isfinite(varE)
+    varE = std(E)^2 / target.d #variance per dimension
+    no_divergences = isfinite(varE)
 
     ### update the hyperparameters ###
 
-    if no_divergences:
-        L_new = sigma * jnp.sqrt(self.Target.d)
-        eps_new = self.eps * jnp.power(varE_wanted / varE, 0.25) #assume var[E] ~ eps^4
-        success = jnp.abs(1.0 - varE / varE_wanted) < 0.2 #we are done
-
-    else:
+    if no_divergences
+        L_new = sigma * sqrt(target.d)
+        eps_new = sett.eps * jnp.power(varE_wanted / varE, 0.25) #assume var[E] ~ eps^4
+        success = abs(1.0 - varE / varE_wanted) < 0.2 #we are done
+    else
         L_new = self.L
-
-        if self.eps < eps_inappropriate:
-            eps_inappropriate = self.eps
+        if sett.eps < eps_inappropriate
+            eps_inappropriate = sett.eps
         end
     end
-        eps_new = jnp.inf #will be lowered later
+        eps_new = Inf #will be lowered later
 
 
     #update the known region of appropriate eps
 
-    if not no_divergences: # inappropriate epsilon
-        if self.eps < eps_inappropriate: #it is the smallest found so far
-            eps_inappropriate = self.eps
+    if not no_divergences # inappropriate epsilon
+        if sett.eps < eps_inappropriate #it is the smallest found so far
+            eps_inappropriate = sett.eps
         end
-    else: # appropriate epsilon
-        if self.eps > eps_appropriate: #it is the largest found so far
-            eps_appropriate = self.eps
+    else # appropriate epsilon
+        if sett.eps > eps_appropriate #it is the largest found so far
+            eps_appropriate = sett.eps
         end
     end
 
     # if suggested new eps is inappropriate we switch to bisection
-    if eps_new > eps_inappropriate:
+    if eps_new > eps_inappropriate
         eps_new = 0.5 * (eps_inappropriate + eps_appropriate)
     end
 
     self.set_hyperparameters(L_new, eps_new)
 
-    #if dialog:
+    #if dialog
     #    word = 'bisection' if (not no_divergences) else 'update'
     #    print('varE / varE wanted: {} ---'.format(np.round(varE / varE_wanted, 4)) + word + '---> eps: {}, sigma = L / sqrt(d): {}'.format(np.round(eps_new, 3), np.round(L_new / np.sqrt(self.Target.d), 3)))
 
@@ -176,25 +174,25 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
 
     props = (Inf, 0.0, false)
 
-    if dialog:
-        print('Hyperparameter tuning (first stage)')
+    if dialog
+        println("Hyperparameter tuning (first stage)")
     end
 
     ### first stage: L = sigma sqrt(d)  ###
     ### LEFT HERE
     for i in 1:sett.tune_maxiter
-        props = tuning_step(props)
-        if props[end]: # success == True
+        props = tuning_step(sampler, target, props)
+        if props[end] # success == True
             break
         end
     end
 
     ### second stage: L = epsilon(best) / ESS(correlations)  ###
-    if dialog:
-        print('Hyperparameter tuning (second stage)')
+    if dialog
+        println("Hyperparameter tuning (second stage)")
     end
 
-    n = 10^.(LinRange(2, log10(2500), 6))
+    n = 10 .^ (LinRange(2, log10(2500), 6))
     n = append!([2.0], n)
     n = Int.(round.(n))
 
@@ -204,20 +202,22 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
         init = X[n[i-1]-1]
         for j in n[i-1]:n[i]
             init, X[j] = Step(sampler, target, init; monitor_energy=true)
-        ESS = ess_corr(X[:n[i]])
-        if dialog:
-            print('n = {0}, ESS = {1}'.format(n[i], ESS))
         end
-        if n[i] > 10.0 / ESS:
+        ESS = ess_corr(X[:n[i]])
+        if dialog
+            println(string("n = ", n[1], "ESS = ", ESS))
+        end
+        if n[i] > 10.0 / ESS
             break
         end
     end
 
     L = 0.4 * eps / ESS # = 0.4 * correlation length
 
-    if dialog:
-        print('L / sqrt(d) = {}, ESS(correlations) = {}'.format(L / sqrt(target.d), ESS))
-        print('-------------')
+    if dialog
+        println(string("L / sqrt(d) = ", L / sqrt(target.d),
+                       "ESS(correlations) = ", ESS))
+        println("-------------")
     end
 
     return eps, L
