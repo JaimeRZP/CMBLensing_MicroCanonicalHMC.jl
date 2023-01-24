@@ -6,8 +6,8 @@ mutable struct Settings
     nu::Float64
     lambda_c::Float64
     tune_varE_wanted::Float64
-    tune_burn_in::Float64
-    tune_samples::Float64
+    tune_burn_in::Int
+    tune_samples::Int
     tune_maxiter::Int
     integrator::String
 end
@@ -120,7 +120,7 @@ function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     eps = sampler.settings.eps
     L = sampler.settings.L
     if [eps, L] == [0.0, 0.0]
-        prinln("Self-tuning hyperparameters")
+        println("Self-tuning hyperparameters")
         eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
     end
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
