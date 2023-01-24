@@ -13,6 +13,7 @@ abstract type Target end
 
 include("sampler.jl")
 include("targets.jl")
+include("tuning.jl")
 include("integrators.jl")
 
 
