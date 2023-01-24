@@ -8,6 +8,7 @@ struct mutable Settings
     tune_varE_wanted::Float64
     tune_burn_in::Float64
     tune_samples::Float64
+    tune_max_iter::Int
     integrator::String
 end
 
@@ -20,8 +21,9 @@ function Settings(; kwargs...)
     nu = get(kwargs, :nu, 0.0)
     lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
     tune_varE_wanted = get(kwargs, :tune_varE_wanted, 0.0005)
-    tune_burn_in = get(kwargs, :tube_burn_in, 2000)
-    tune_samples = get(kwargs, :tue_samples, 1000)
+    tune_burn_in = get(kwargs, :tune_burn_in, 2000)
+    tune_samples = get(kwargs, :tune_samples, 1000)
+    tune_maxiter = get(kwargs, :tune_maxiter, 10)
     integrator = get(kwargs, :integrator, "LF")
     sett = Settings(key,
                     eps, L, nu, lambda_c,
@@ -70,7 +72,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps, g, u)
+function Update_momentum(sampler::Sampler, target::Target, eff_eps, g, u, r)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -80,22 +82,26 @@ function Update_momentum(sampler::Sampler, target::Target, eff_eps, g, u)
     ue = dot(u, e)
     sh = sinh.(eff_eps * g_norm ./ target.d)
     ch = cosh.(eff_eps * g_norm ./ target.d)
+    th = tanh.(eff_eps * g_norm ./ target.d)
+    delta_r = @.(log(ch) + log1p(ue * th))
 
-    return @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
+    uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
+    rr = r .+ delta_r
+    return uu, rr
 end
 
 function Dynamics(sampler::Sampler, target::Target, state)
     """One step of the Langevin-like dynamics."""
 
-    x, u, g, time = state
+    x, u, g, r, time = state
 
     # Hamiltonian step
-    xx, gg, uu = sampler.hamiltonian_dynamics(sampler, x, g, u)
+    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, x, g, u)
 
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
 
-    return xx, uuu, gg, 0.0
+    return xx, uuu, gg, rr, 0.0
 end
 
 function Get_initial_conditions(sampler::Sampler, target::Target)
@@ -105,8 +111,8 @@ function Get_initial_conditions(sampler::Sampler, target::Target)
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
-
-    return [x, u, g, 0.0]
+    r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
+    return [x, u, g, r, 0.0]
 end
 
 function _set_hyperparameters(sampler::Sampler, target::Target)
@@ -124,12 +130,19 @@ function _set_hyperparameters(sampler::Sampler, target::Target)
     sett.nu = nu
 end
 
-function Step(sampler::Sampler, target::Target, state)
+function Energy(target::Target, x, r):
+    return target.d * r + target.nlogp(x)
+end
+
+function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-
-    x, u, g, time = Dynamics(sampler, target, state)
-
-    return [x, u, g, time], target.transform(x)
+    monitor_energy = get(kwargs, :monitor_energy, false)
+    x, u, g, r, time = Dynamics(sampler, target, state)
+    if monitor_energy
+        return [x, u, g, r, time], [x, Energy(x, r)]
+    else
+        return [x, u, g, r, time], target.transform(x)
+    end
 end
 
 function Sample(sampler::Sampler, target::Target; kwargs...)
@@ -149,7 +162,7 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
     samples = zeros(eltype(x), length(x), kwargs[:num_steps])
     samples = Vector{eltype(samples)}[eachcol(samples)...]
     for i in 1:kwargs[:num_steps]
-        init, sample = Step(sampler, target, init)
+        init, sample = Step(sampler, target, init; kwargs...)
         samples[i] = sample
     end
 
