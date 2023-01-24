@@ -85,20 +85,21 @@ function ess_corr(x)
 end
 =#
 
-function _tuning_step(settings::Sampler, target::Target, props)
+function _tuning(init, sampler::Sampler, target::Target, props)
     sett = sampler.settings
     eps_inappropriate, eps_appropriate, success = props
 
     # get a small number of samples
-    E = zeros(eltype(x), length(x), kwargs[:num_steps])
+    x, u, g, time = init
+    E = zeros(eltype(x), length(x), sett.tune_samples)
     E = Vector{eltype(samples)}[eachcol(samples)...]
-    for i in 1:kwargs[:num_steps]
+    for i in 1:sett.tune_samples
         init, sample = Step(sampler, target, init)
         E[i] = sample
     end
 
     # remove large jumps in the energy
-    E -= jnp.average(E)
+    E -= mean(E)
     E = remove_jumps(E)
 
     ### compute quantities of interest ###
@@ -116,7 +117,7 @@ function _tuning_step(settings::Sampler, target::Target, props)
 
     if no_divergences
         L_new = sigma * sqrt(target.d)
-        eps_new = sett.eps * jnp.power(varE_wanted / varE, 0.25) #assume var[E] ~ eps^4
+        eps_new = sett.eps * (varE_wanted / varE)^0.25 #assume var[E] ~ eps^4
         success = abs(1.0 - varE / varE_wanted) < 0.2 #we are done
     else
         L_new = self.L
@@ -167,8 +168,8 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     ### random key ###
     key = sett.key
 
-    init_eps, init_L = np.sqrt(target.d), 0.6
-    for i in 1:kwargs[:nadaptation]
+    init_eps, init_L = sqrt(target.d), 0.6
+    for i in 1:sett.tune_burn_in
         init, x0 = Step(sampler, target, init)
     end
 
@@ -181,7 +182,7 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     ### first stage: L = sigma sqrt(d)  ###
     ### LEFT HERE
     for i in 1:sett.tune_maxiter
-        props = tuning_step(sampler, target, props)
+        props = _tuning(init, sampler, target, props)
         if props[end] # success == True
             break
         end
