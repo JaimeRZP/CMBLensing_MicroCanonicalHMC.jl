@@ -2,17 +2,17 @@
 struct Settings
     key::MersenneTwister
     lambda_c::Float64
-    eps::Float64
-    L::Float64
     integrator::String
 end
 
-function Settings(eps, L; kwargs...)
+function Settings(; kwargs...)
+    kwargs = Dict(kwargs)
+
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
     lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
     integrator = get(kwargs, :integrator, "LF")
-    sett = Settings(key, lambda_c, eps, L, integrator)
+    sett = Settings(key, lambda_c, integrator)
 end
 
 struct Hyperparameters
@@ -21,20 +21,26 @@ struct Hyperparameters
     nu::Float64
 end
 
-function Hyperparameters(sett::Settings, target::Target)
-    nu = sqrt((exp(2 * sett.eps / sett.L) - 1.0) / target.d)
-    return Hyperparameters(sett.L, sett.eps, nu)
+function _set_hyperparameters(eps, L, sett::Settings, target::Target; kwargs...)
+    if [eps, L] == [0.0, 0.0]
+        prinln("Self-tuning hyperparameters")
+        eps, L = tune_hyperparameters(sett, target)
+    end
+    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
+    return Hyperparameters(L, eps, nu)
 end
 
 struct Sampler
-    #TO DO: what types are these?
     settings::Settings
     target::Target
-    hamiltonian_dynamics
+    hamiltonian_dynamics::Function
     hyperparameters::Hyperparameters
 end
 
-function Sampler(sett::Settings, target::Target)
+function Sampler(sett::Settings, target::Target; kwargs...)
+    kwargs = Dict(kwargs)
+    eps = get(kwargs, :eps, 0.0)
+    L = get(kwargs, :L, 0.0)
 
     if sett.integrator == "LF"  # leapfrog
         hamiltonian_dynamics = Leapfrog
@@ -46,7 +52,7 @@ function Sampler(sett::Settings, target::Target)
         println(string("integrator = ", integrator, "is not a valid option."))
     end
 
-    hyperparams = Hyperparameters(sett, target)
+    hyperparams = _set_hyperparameters(eps, L, sett, target; kwargs...)
 
     return Sampler(sett, target, hamiltonian_dynamics, hyperparams)
 end
