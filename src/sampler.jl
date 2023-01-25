@@ -113,7 +113,7 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
     r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
-    return [x, u, g, r, 0.0]
+    return (x, u, g, r, 0.0)
 end
 
 function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
@@ -139,9 +139,9 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     monitor_energy = get(kwargs, :monitor_energy, false)
     x, u, g, r, time = Dynamics(sampler, target, state)
     if monitor_energy
-        return [x, u, g, r, time], [x, Energy(x, r)]
+        return (x, u, g, r, time), (x, Energy(x, r))
     else
-        return [x, u, g, r, time], target.transform(x)
+        return (x, u, g, r, time), target.transform(x)
     end
 end
 
