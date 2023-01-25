@@ -134,27 +134,28 @@ end
 
 CMBLensingTarget(prob; kwargs...) = begin
     d = length(prob.Ωstart)
-    inv_Λmass = inv(Λmass)
+    inv_Λmass = pinv(prob.Λmass)
 
     function nlogp(x)
-        return prob()
+        return prob(x)
     end
 
     function grad_nlogp(x)
-        return Zygote.gradient(prob, x)[1]
+        return LenseBasis(Zygote.gradient(nlogp, x)[1])
+        #return ForwardDiff.gradient(nlogp, x)
     end
 
     function transform(x)
-        return inv_Λmass * x
+        return LenseBasis(inv_Λmass * x)
     end
 
     function prior_draw(key)
-        return prob.Λmass * prob.Ωstart
+        return LenseBasis(prob.Λmass * prob.Ωstart)
     end
 
-    StandardGaussianTarget(d,
-                           nlogp,
-                           grad_nlogp,
-                           transform,
-                           prior_draw)
+    CMBLensingTarget(d,
+                     nlogp,
+                     grad_nlogp,
+                     transform,
+                     prior_draw)
 end
