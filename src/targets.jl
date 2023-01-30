@@ -141,16 +141,16 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     function grad_nlogp(x)
-        return LenseBasis(Zygote.gradient(nlogp, x)[1])
+        return CMBLensing.LenseBasis(Zygote.gradient(nlogp, x)[1])
         #return ForwardDiff.gradient(nlogp, x)
     end
 
     function transform(x)
-        return LenseBasis(inv_Λmass * x)
+        return CMBLensing.LenseBasis(inv_Λmass * x)
     end
 
     function prior_draw(key)
-        return LenseBasis(prob.Λmass * prob.Ωstart)
+        return CMBLensing.LenseBasis(prob.Λmass * prob.Ωstart)
     end
 
     CMBLensingTarget(d,
