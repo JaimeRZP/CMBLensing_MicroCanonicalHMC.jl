@@ -53,11 +53,14 @@ function Sampler(;kwargs...)
     return Sampler(sett, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(sampler::Sampler, target::Target)
+function Random_unit_vector(sampler::Sampler, target::Target;
+                            normalize=true)
     """Generates a random (isotropic) unit vector."""
     key = sampler.settings.key
     u = randn(key, target.d)
-    u ./=  sqrt.(sum(u.^2))
+    if normalize
+        u ./=  sqrt.(sum(u.^2))
+    end
     return  u
 
 end
