@@ -67,7 +67,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     sett = sampler.settings
     key = sett.key
 
-    z = sett.nu .* randn(key, target.d)
+    z = sett.nu .* Random_unit_vector(sampler, target; normalize=false)
     uu = (u .+ z) / sqrt.(sum((u .+ z).^2))
     return uu
 end
