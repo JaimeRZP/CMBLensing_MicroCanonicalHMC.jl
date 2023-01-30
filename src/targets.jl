@@ -139,7 +139,7 @@ CMBLensingTarget(prob; kwargs...) = begin
     inv_Λmass = pinv(Λmass)
 
     function nlogp(x)
-        return prob(x)
+        return -1.0 .* prob(x)
     end
 
     function grad_nlogp(x)
