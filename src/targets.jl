@@ -148,13 +148,13 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     function transform(x)
-        # return CMBLensing.LenseBasis(inv_Λmass * x)
-        return x
+        return CMBLensing.LenseBasis(inv_Λmass * x)
+        #return x
     end
 
     function prior_draw(key)
-        # return CMBLensing.LenseBasis(Λmass * prob.Ωstart)
-        return prob.Ωstart
+        return CMBLensing.LenseBasis(Λmass * prob.Ωstart)
+        #return prob.Ωstart
     end
 
     CMBLensingTarget(d,
