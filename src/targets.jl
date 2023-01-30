@@ -135,7 +135,7 @@ end
 
 CMBLensingTarget(prob; kwargs...) = begin
     d = length(prob.Ωstart)
-    Λmass = Diagonal(LenseBasis(diag(target.Λmass)))
+    Λmass = Diagonal(LenseBasis(diag(prob.Λmass)))
     inv_Λmass = pinv(Λmass)
 
     function nlogp(x)
