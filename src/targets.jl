@@ -135,7 +135,8 @@ end
 
 CMBLensingTarget(prob; kwargs...) = begin
     d = length(prob.Ωstart)
-    inv_Λmass = pinv(prob.Λmass)
+    Λmass = Diagonal(LenseBasis(diag(target.Λmass)))
+    inv_Λmass = pinv(Λmass)
 
     function nlogp(x)
         return prob(x)
@@ -151,11 +152,11 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     function prior_draw(key)
-        return CMBLensing.LenseBasis(prob.Λmass * prob.Ωstart)
+        return CMBLensing.LenseBasis(Λmass * prob.Ωstart)
     end
 
     CMBLensingTarget(d,
-                     prob.Λmass,
+                     Λmass,
                      nlogp,
                      grad_nlogp,
                      transform,
