@@ -158,7 +158,7 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target)
-    x, u, g, time = init
+    x, u, g, r, time = init
 
     _set_hyperparameters(init, sampler, target; kwargs...)
 
