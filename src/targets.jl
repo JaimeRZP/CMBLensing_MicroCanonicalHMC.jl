@@ -155,7 +155,7 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     CMBLensingTarget(d,
-                     Λmass,
+                     prob.Λmass,
                      nlogp,
                      grad_nlogp,
                      transform,
