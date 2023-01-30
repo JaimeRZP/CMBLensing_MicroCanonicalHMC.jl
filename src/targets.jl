@@ -126,6 +126,7 @@ end
 
 struct CMBLensingTarget <: Target
     d::Int
+    Λmass
     nlogp::Function
     grad_nlogp::Function
     transform::Function
@@ -154,6 +155,7 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     CMBLensingTarget(d,
+                     Λmass,
                      nlogp,
                      grad_nlogp,
                      transform,
