@@ -75,7 +75,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps, g, u, r)
+function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u, r)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -104,7 +104,10 @@ function Dynamics(sampler::Sampler, target::Target, state)
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
 
-    return xx, uuu, gg, rr, 0.0
+    # why not this??
+    # time += eps
+
+    return xx, uuu, gg, rr, time
 end
 
 function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)

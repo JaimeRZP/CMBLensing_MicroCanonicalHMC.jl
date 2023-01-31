@@ -166,8 +166,8 @@ end
 
 CMBLensingTarget(prob; kwargs...) = begin
     d = length(prob.Ωstart)
-    Λmass = abs.(real(Diagonal(LenseBasis(diag(prob.Λmass)))))
-    sqrtΛmass = sqrt(Λmass)
+    Λmass = real(prob.Λmass)
+    sqrtΛmass = sqrt(prob.Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
 
     function transform(x)
