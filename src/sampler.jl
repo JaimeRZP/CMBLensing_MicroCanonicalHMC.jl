@@ -144,7 +144,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     if monitor_energy
         return (x, u, g, r, time), (x, Energy(x, r))
     else
-        return (x, u, g, r, time), target.transform(x)
+        return (x, u, g, r, time), target.inv_transform(x)
     end
 end
 
