@@ -130,30 +130,40 @@ struct CMBLensingTarget <: Target
     nlogp::Function
     grad_nlogp::Function
     transform::Function
+    inv_transform::Function
     prior_draw::Function
 end
 
 CMBLensingTarget(prob; kwargs...) = begin
     d = length(prob.Ωstart)
-    Λmass = sqrt(Diagonal(LenseBasis(diag(prob.Λmass))))
-    inv_Λmass = pinv(Λmass)
+    Λmass = Diagonal(LenseBasis(diag(prob.Λmass)))
+    sqrtΛmass = sqrt(Λmass)
+    inv_sqrtΛmass = pinv(Λmass)
 
-    function nlogp(x)
+    function transform(x)
+        xt = CMBLensing.LenseBasis(inv_sqrtΛmass * x)
+        return xt
+    end
+
+    function inv_transform(xt)
+        x = CMBLensing.LenseBasis(sqrtΛmass * xt)
+        return x
+    end
+
+    function nlogp(xt)
+        x = inv_transform(xt)
         return -1.0 .* prob(x)
     end
 
-    function grad_nlogp(x)
-        return CMBLensing.LenseBasis(Zygote.gradient(nlogp, x)[1])
+    function grad_nlogp(xt)
+        return CMBLensing.LenseBasis(Zygote.gradient(nlogp, xt)[1])
         #return ForwardDiff.gradient(nlogp, x)
     end
 
-    function transform(x)
-        return CMBLensing.LenseBasis(inv_Λmass * x)
-        #return x
-    end
-
     function prior_draw(key)
-        return CMBLensing.LenseBasis(Λmass * prob.Ωstart)
+        x = prob.Ωstart
+        xt = transform(x)
+        return CMBLensing.LenseBasis(xt)
         #return prob.Ωstart
     end
 
@@ -162,5 +172,6 @@ CMBLensingTarget(prob; kwargs...) = begin
                      nlogp,
                      grad_nlogp,
                      transform,
+                     inv_transform,
                      prior_draw)
 end
