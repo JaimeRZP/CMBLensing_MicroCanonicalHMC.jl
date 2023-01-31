@@ -143,8 +143,8 @@ CMBLensingTarget(prob; kwargs...) = begin
     end
 
     function grad_nlogp(x)
-        return CMBLensing.LenseBasis(Zygote.gradient(nlogp, x)[1])
-        #return ForwardDiff.gradient(nlogp, x)
+        #return CMBLensing.LenseBasis(Zygote.gradient(nlogp, x)[1])
+        return ForwardDiff.gradient(nlogp, x)
     end
 
     function transform(x)
