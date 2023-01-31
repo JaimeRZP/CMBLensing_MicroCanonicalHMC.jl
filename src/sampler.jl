@@ -157,7 +157,7 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
             samples (shape = (num_steps, self.Target.d))
     """
 
-    init = Get_initial_conditions(sampler, target)
+    init = Get_initial_conditions(sampler, target; kwargs...)
     x, u, g, r, time = init
 
     _set_hyperparameters(init, sampler, target; kwargs...)
