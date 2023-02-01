@@ -43,9 +43,7 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function prior_draw(key)
-        xt = vi_t[DynamicPPL.SampleFromPrior()]
-        #xt = transform(x)
-        return xt
+        return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
     TuringTarget(d,
