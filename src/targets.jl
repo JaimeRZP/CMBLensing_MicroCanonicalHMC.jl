@@ -34,13 +34,13 @@ TuringTarget(model; kwargs...) = begin
 
     function transform(x)
         dists = _get_dists(vi)
-        xt = [invlink(dist, par) for (dist, par) in zip(dists, x)]
+        xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
         return xt
     end
 
     function inv_transform(xt)
         dists = _get_dists(vi)
-        x = [invlink(dist, par) for (dist, par) in zip(dists, xt)]
+        x = [Bijectors.invlink(dist, par) for (dist, par) in zip(dists, xt)]
         return x
     end
 
@@ -80,7 +80,7 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
     d = length(priors)
 
     #function transform(xs)
-    #    xxs = [invlink(dist, x) for (dist, x) in zip(priors, xs)]
+    #    xxs = [Bijectors.invlink(dist, x) for (dist, x) in zip(priors, xs)]
     #    return xxs
     #end
 
