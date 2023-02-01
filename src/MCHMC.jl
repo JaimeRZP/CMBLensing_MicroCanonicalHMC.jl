@@ -6,7 +6,7 @@ export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
 using Interpolations, LinearAlgebra, Statistics, DynamicPPL
 using Distributions, Random, ForwardDiff, Zygote, AbstractMCMC
-using LogDensityProblems, LogDensityProblemsAD
+using LogDensityProblems, LogDensityProblemsAD, Bijectors
 
 abstract type Target end
 
