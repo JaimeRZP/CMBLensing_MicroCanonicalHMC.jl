@@ -15,12 +15,12 @@ end
 TuringTarget(model; kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
-    Turing.link!!(vi, model)
+    vi_t = Turing.link!!(vi, model)
     dists = _get_dists(vi)
     vsyms = keys(vi)
     d = length(vsyms)
 
-    ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi, model, ctxt))
+    ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
     ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
 
     function transform(x)
@@ -34,8 +34,8 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function nlogp(xt)
-        x = inv_transform(xt)
-        return -1.0 .* ℓπ(x)
+        #x = inv_transform(xt)
+        return -1.0 .* ℓπ(xt)
     end
 
     function grad_nlogp(xt)
@@ -43,7 +43,7 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function prior_draw(key)
-        xt = vi[DynamicPPL.SampleFromPrior()]
+        xt = vi_t[DynamicPPL.SampleFromPrior()]
         #xt = transform(x)
         return xt
     end
