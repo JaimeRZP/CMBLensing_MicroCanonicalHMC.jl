@@ -14,6 +14,7 @@ include("sampler.jl")
 include("targets.jl")
 include("tuning.jl")
 include("integrators.jl")
+include("abstractmcmc.jl")
 
 
 end
