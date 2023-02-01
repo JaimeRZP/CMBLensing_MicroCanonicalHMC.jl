@@ -167,7 +167,7 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
 
     samples = zeros(eltype(x), length(x), kwargs[:num_steps]+1)
     samples = Vector{eltype(samples)}[eachcol(samples)...]
-    samples[1] = x
+    samples[1] = target.inv_transform(x)
     for i in 2:kwargs[:num_steps]+1
         init, sample = Step(sampler, target, init; kwargs...)
         samples[i] = sample
