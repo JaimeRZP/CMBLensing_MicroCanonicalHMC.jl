@@ -15,31 +15,19 @@ end
 TuringTarget(model; kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
-    #Turing.link!!(vi, model)
+    dists = _get_dists(vi)
     vsyms = keys(vi)
     d = length(vsyms)
 
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi, model, ctxt))
-    ℓπ = Base.Fix1(LogDensityProblems.logdensity, ℓ)
-    #ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
-    #OPT: we probably want to use this in the future.
-    #     and merge nlogp and grad_nlogp into one function.
-    #∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
-
-    #function transform(xs)
-    #    dists = _get_dists(vi)
-    #    xxs = [invlink(dist, x) for (dist, x) in zip(dists, xs)]
-    #    return xxs
-    #end
+    ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
 
     function transform(x)
-        dists = _get_dists(vi)
         xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
         return xt
     end
 
     function inv_transform(xt)
-        dists = _get_dists(vi)
         x = [Bijectors.invlink(dist, par) for (dist, par) in zip(dists, xt)]
         return x
     end
