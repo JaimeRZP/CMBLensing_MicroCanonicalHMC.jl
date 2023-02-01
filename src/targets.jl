@@ -33,23 +33,24 @@ TuringTarget(model; kwargs...) = begin
     #end
 
     function transform(x)
-        xt = x
+        dists = _get_dists(vi)
+        xt = [invlink(dist, par) for (dist, par) in zip(dists, x)]
         return xt
     end
 
     function inv_transform(xt)
-        x = xt
+        dists = _get_dists(vi)
+        x = [invlink(dist, par) for (dist, par) in zip(dists, xt)]
         return x
     end
 
-    function nlogp(x)
+    function nlogp(xt)
+        x = inv_transform(xt)
         return -1.0 .* ℓπ(x)
     end
 
-    function grad_nlogp(x)
-        return ForwardDiff.gradient(nlogp, x)
-        #OPT: we probably want to use this in the future.
-        #return ∂lπ∂θ(x)[2]
+    function grad_nlogp(xt)
+        return ForwardDiff.gradient(nlogp, xt)
     end
 
     function prior_draw(key)
