@@ -142,14 +142,14 @@ end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-    monitor_energy = get(kwargs, :monitor_energy, false)
-    x, u, g, r, time = Dynamics(sampler, target, state)
-    if monitor_energy
+    step = Dynamics(sampler, target, state)
+    x, u, g, r, time = step
+    if get(kwargs, :monitor_energy, false)
         energy = Energy(target, x, r)
     else
         energy = nothing
     end
-    return (target.inv_transform(x), energy)
+    return step, (target.inv_transform(x), energy)
 end
 
 function Sample(sampler::Sampler, target::Target; kwargs...)
