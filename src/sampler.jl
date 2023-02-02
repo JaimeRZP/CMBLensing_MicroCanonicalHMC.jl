@@ -168,10 +168,10 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
     _set_hyperparameters(init, sampler, target; kwargs...)
 
     samples = DataFrame(Ω=typeof(x), Energy=typeof(energy))
-    push! (samples, (target.inv_transform(x), energy))
+    push!(samples, (target.inv_transform(x), energy))
     for i in 2:kwargs[:num_steps]+1
         init, sample = Step(sampler, target, init; kwargs...)
-        push! (samples, sample)
+        push!(samples, sample)
     end
 
     return samples
