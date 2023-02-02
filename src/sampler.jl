@@ -152,7 +152,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     return step, (target.inv_transform(x), energy)
 end
 
-function Sample(sampler::Sampler, target::Target; kwargs...)
+function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -168,9 +168,9 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
     _set_hyperparameters(init, sampler, target; kwargs...)
 
     #TODO: Type
-    samples = DataFrame(Ω=Any, Energy=Any)
+    samples = DataFrame(Ω=Any[], Energy=Any[])
     push!(samples, (target.inv_transform(x), energy))
-    for i in 2:kwargs[:num_steps]+1
+    for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
         push!(samples, sample)
     end
