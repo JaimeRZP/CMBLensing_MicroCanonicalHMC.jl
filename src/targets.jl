@@ -164,7 +164,8 @@ mutable struct CMBLensingTarget <: Target
     prior_draw::Function
 end
 
-    d = length(prob.Ωstart)
+CMBLensingTarget(prob; kwargs...) = begin
+        d = length(prob.Ωstart)
     Λmass = real(prob.Λmass)
     sqrtΛmass = sqrt(Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
