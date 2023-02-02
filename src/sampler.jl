@@ -145,10 +145,11 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     monitor_energy = get(kwargs, :monitor_energy, false)
     x, u, g, r, time = Dynamics(sampler, target, state)
     if monitor_energy
-        return (x, u, g, r, time), [target.inv_transform(x); Energy(target, x, r)]
+        energy = Energy(target, x, r)
     else
-        return (x, u, g, r, time), target.inv_transform(x)
+        energy = nothing
     end
+    return (target.inv_transform(x), energy)
 end
 
 function Sample(sampler::Sampler, target::Target; kwargs...)
@@ -162,15 +163,15 @@ function Sample(sampler::Sampler, target::Target; kwargs...)
 
     init = Get_initial_conditions(sampler, target; kwargs...)
     x, u, g, r, time = init
+    energy = Energy(target, x, r)
 
     _set_hyperparameters(init, sampler, target; kwargs...)
 
-    samples = zeros(eltype(x), length(x), kwargs[:num_steps]+1)
-    samples = Vector{eltype(samples)}[eachcol(samples)...]
-    samples[1] = x
+    samples = DataFrame(Ω=typeof(x), Energy=typeof(energy))
+    push! (samples, (target.inv_transform(x), energy))
     for i in 2:kwargs[:num_steps]+1
         init, sample = Step(sampler, target, init; kwargs...)
-        samples[i] = sample
+        push! (samples, sample)
     end
 
     return samples
