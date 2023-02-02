@@ -145,7 +145,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     monitor_energy = get(kwargs, :monitor_energy, false)
     x, u, g, r, time = Dynamics(sampler, target, state)
     if monitor_energy
-        return (x, u, g, r, time), (x, Energy(x, r))
+        return (x, u, g, r, time), [target.inv_transform(x); Energy(target, x, r)]
     else
         return (x, u, g, r, time), target.inv_transform(x)
     end
