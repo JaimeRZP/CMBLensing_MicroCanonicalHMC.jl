@@ -136,8 +136,14 @@ function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     sampler.settings.nu = nu
 end
 
+#=
 function Energy(target::Target, x, r)
     return target.d * r + target.nlogp(x)
+end
+=#
+
+function Energy(target::Target, x, u)
+    return -target.nlogp(x) * r + dot(u, target.grad_nlogp(x))
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
@@ -145,7 +151,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     step = Dynamics(sampler, target, state)
     x, u, g, r, time = step
     if get(kwargs, :monitor_energy, false)
-        energy = Energy(target, x, r)
+        energy = Energy(target, x, u)
     else
         energy = nothing
     end
