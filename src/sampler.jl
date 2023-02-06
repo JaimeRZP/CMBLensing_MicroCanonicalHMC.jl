@@ -1,44 +1,51 @@
+mutable struct Hyperparameters{T}
+     eps ::T
+     L::T
+     nu::T
+     lambda_c::T
+end
+
+Hyperparameters(;kwargs...) = begin
+    eps = get(kwargs, :eps, 0.0)
+    L = get(kwargs, :L, 0.0)
+    nu = get(kwargs, :nu, 0.0)
+    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
+    Hyperparameters(eps, L, nu, lambda_c)
+end
 
 mutable struct Settings
     key::MersenneTwister
-    eps::Float64
-    L::Float64
-    nu::Float64
-    lambda_c::Float64
-    tune_varE_wanted::Float64
+    varE_wanted::Float64
     tune_burn_in::Int
     tune_samples::Int
     tune_maxiter::Int
     integrator::String
 end
 
-function Settings(; kwargs...)
+Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
-    eps = get(kwargs, :eps, 0.0)
-    L = get(kwargs, :L, 0.0)
-    nu = get(kwargs, :nu, 0.0)
-    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
-    tune_varE_wanted = get(kwargs, :tune_varE_wanted, 0.0005)
+    varE_wanted = get(kwargs, :varE_wanted, 0.0005)
     tune_burn_in = get(kwargs, :tune_burn_in, 2000)
     tune_samples = get(kwargs, :tune_samples, 1000)
     tune_maxiter = get(kwargs, :tune_maxiter, 10)
     integrator = get(kwargs, :integrator, "LF")
-    sett = Settings(key,
-                    eps, L, nu, lambda_c,
-                    tune_varE_wanted, tune_burn_in, tune_samples, tune_maxiter,
-                    integrator)
+    Settings(key,
+             varE_wanted, tune_burn_in, tune_samples, tune_maxiter,
+             integrator)
 end
 
 struct Sampler
     settings::Settings
+    hyperparameters::Hyperparameters
     hamiltonian_dynamics::Function
 end
 
-function Sampler(;kwargs...)
+function Sampler(eps, L; kwargs...)
 
     sett = Settings(;kwargs...)
+    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
 
     if sett.integrator == "LF"  # leapfrog
         hamiltonian_dynamics = Leapfrog
@@ -50,7 +57,7 @@ function Sampler(;kwargs...)
         println(string("integrator = ", integrator, "is not a valid option."))
     end
 
-    return Sampler(sett, hamiltonian_dynamics)
+    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
 function Random_unit_vector(sampler::Sampler, target::Target;
@@ -123,20 +130,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     return (x, u, g, r, 0.0)
 end
 
-function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
-    eps = sampler.settings.eps
-    L = sampler.settings.L
-    if [eps, L] == [0.0, 0.0]
-        println("Self-tuning hyperparameters")
-        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
-    end
-    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
-
-    sampler.settings.eps = eps
-    sampler.settings.L = L
-    sampler.settings.nu = nu
-end
-
 #=
 function Energy(target::Target, x, r)
     return target.d * r + target.nlogp(x)
@@ -172,10 +165,19 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     x, u, g, r, time = init
     energy = Energy(target, x, u)
 
-    _set_hyperparameters(init, sampler, target; kwargs...)
+    eps = sampler.hyperparameters.eps
+    L = sampler.hyperparameters.L
+    if [eps, L] == [0.0, 0.0]
+        println("Self-tuning hyperparameters")
+        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
+    end
+    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
+    sampler.hyperparameters.eps = eps
+    sampler.settings.hyperparameters.L = L
+    sampler.settings.hyperparameters.nu = nu
 
     #TODO: Type
-    samples = DataFrame(Ω=Any[], Energy=Any[])
+    samples = DataFrame(Ω=Any[], E=Any[])
     push!(samples, (target.inv_transform(x), energy))
     for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
