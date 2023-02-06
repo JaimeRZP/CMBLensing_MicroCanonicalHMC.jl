@@ -81,33 +81,38 @@ function ess_corr(x)
 
     ### my part (combine all dimensions): ###
     neff = ess.squeeze() / num_samples
-    return 1.0 / jnp.average(1 / neff)
+    return 1.0 / mean(1 / neff)
 end
 =#
 
-function _tuning(init, sampler::Sampler, target::Target, props)
+function tune_eps(init, sampler::Sampler, target::Target, props)
     sett = sampler.settings
-    eps_inappropriate, eps_appropriate, success = props
+    eps = sampler.hyperparameters.eps
+    varE_wanted = sett.varE_wanted
 
     # get a small number of samples
+    eps_inappropriate, eps_appropriate, success = props
     x, u, g, time = init
-    E = zeros(eltype(x), length(x), sett.tune_samples)
-    E = Vector{eltype(samples)}[eachcol(samples)...]
+
+    samples = DataFrame(Ω=Any[], E=Any[])
     for i in 1:sett.tune_samples
-        init, sample = Step(sampler, target, init)
-        E[i] = sample
+        init, sample = Step(sampler, target, init;
+                            monitor_energy=true)
+        push!(samples, sample)
     end
 
     # remove large jumps in the energy
-    E -= mean(E)
-    E = remove_jumps(E)
+    E = samples.E - mean(samples.E)
+    #E = remove_jumps(E)
 
     ### compute quantities of interest ###
 
     # typical size of the posterior
-    x1 = mean(X, axis= 0) #first moments
-    x2 = mean(square.(X), axis=0) #second moments
-    sigma = sqrt.(mean(x2 - square.(x1))) #average variance over the dimensions
+    # Avg over samples
+    x1 = mean(samples.Ω, axis=1) #first moments
+    x2 = mean(samples.Ω .^ 2, axis=1) #second moments
+    # Avg over params
+    sigma = sqrt.(mean(x2 - x1.^2)) #average variance over the dimensions
 
     # energy fluctuations
     varE = std(E)^2 / target.d #variance per dimension
@@ -115,29 +120,17 @@ function _tuning(init, sampler::Sampler, target::Target, props)
 
     ### update the hyperparameters ###
 
-    if no_divergences
-        L_new = sigma * sqrt(target.d)
-        eps_new = sett.eps * (varE_wanted / varE)^0.25 #assume var[E] ~ eps^4
+    if no_divergences #appropriate eps
+        eps_new = eps * (varE_wanted / varE)^0.25 #assume var[E] ~ eps^4
         success = abs(1.0 - varE / varE_wanted) < 0.2 #we are done
+        if eps_new > eps_appropriate
+            eps_appropriate = eps_new
+        end
     else
-        L_new = self.L
         if sett.eps < eps_inappropriate
             eps_inappropriate = sett.eps
         end
-    end
         eps_new = Inf #will be lowered later
-
-
-    #update the known region of appropriate eps
-
-    if not no_divergences # inappropriate epsilon
-        if sett.eps < eps_inappropriate #it is the smallest found so far
-            eps_inappropriate = sett.eps
-        end
-    else # appropriate epsilon
-        if sett.eps > eps_appropriate #it is the largest found so far
-            eps_appropriate = sett.eps
-        end
     end
 
     # if suggested new eps is inappropriate we switch to bisection
@@ -145,7 +138,7 @@ function _tuning(init, sampler::Sampler, target::Target, props)
         eps_new = 0.5 * (eps_inappropriate + eps_appropriate)
     end
 
-    self.set_hyperparameters(L_new, eps_new)
+    sampler.hyperparameters.eps = eps_new
 
     #if dialog
     #    word = 'bisection' if (not no_divergences) else 'update'
@@ -157,18 +150,11 @@ end
 function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
 
-    # targeted energy variance per dimension
-    varE_wanted = sett.tune_varE_wanted
-    burn_in = sett.tune_burn_in
-    samples = sett.tune_samples
-
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
 
-    ### random key ###
-    key = sett.key
-
-    init_eps, init_L = sqrt(target.d), 0.6
+    sampler.hyperparameters.eps = sqrt(target.d)
+    sampler.hyperparameters.eps = 0.6
     for i in 1:sett.tune_burn_in
         init, x0 = Step(sampler, target, init)
     end
@@ -180,14 +166,14 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     end
 
     ### first stage: L = sigma sqrt(d)  ###
-    ### LEFT HERE
     for i in 1:sett.tune_maxiter
-        props = _tuning(init, sampler, target, props)
+        props = tune_eps(init, sampler, target, props)
         if props[end] # success == True
             break
         end
     end
 
+    #=
     ### second stage: L = epsilon(best) / ESS(correlations)  ###
     if dialog
         println("Hyperparameter tuning (second stage)")
@@ -197,14 +183,15 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     n = append!([2.0], n)
     n = Int.(round.(n))
 
-    X = [zeros(Float64, target.d) for i in 1:n[end]]
-    X[1] = x0
+    samples = DataFrame(Ω=Any[], E=Any[])
+    push!(samples, x0)
     for i in 2:length(n)
-        init = X[n[i-1]-1]
+        init = samples[n[i-1]-1].Ω
         for j in n[i-1]:n[i]
-            init, X[j] = Step(sampler, target, init; monitor_energy=true)
+            init, sample = Step(sampler, target, init; monitor_energy=true)
+            push!(samples, sample)
         end
-        ESS = ess_corr(X[:n[i]])
+        ESS = ess_corr(samples[:n[i]])
         if dialog
             println(string("n = ", n[1], "ESS = ", ESS))
         end
@@ -220,6 +207,5 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
                        "ESS(correlations) = ", ESS))
         println("-------------")
     end
-
-    return eps, L
+   =#
 end
