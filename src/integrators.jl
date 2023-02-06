@@ -1,7 +1,7 @@
 function Leapfrog(sampler::Sampler, target::Target, x, g, u, r)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
-    lambda_c = sampler.hyperparameters.lambda_L
+    lambda_c = sampler.hyperparameters.lambda_c
 
     uu, rr = Update_momentum(sampler, target, eps * 0.5, g, u, r)
 
@@ -20,7 +20,7 @@ function Minimal_norm(sampler::Sampler, target::Target, x, g, u, r)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
-    lambda_c = sampler.hyperparameters.lambda_L
+    lambda_c = sampler.hyperparameters.lambda_c
 
     # V T V T V
     sett = sampler.settings

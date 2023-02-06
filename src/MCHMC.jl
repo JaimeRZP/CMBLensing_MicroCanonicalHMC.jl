@@ -4,7 +4,7 @@ export Settings, Hyperparameters, Sampler, Sample
 export Leapfrog, Minimal_norm
 export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
-using Interpolations, LinearAlgebra, Statistics, DynamicPPL, Turing
+using Interpolations, LinearAlgebra, Statistics, DynamicPPL, Turing, DataFrames
 using Distributions, Random, ForwardDiff, Zygote, AbstractMCMC
 using LogDensityProblems, LogDensityProblemsAD, Bijectors
 
