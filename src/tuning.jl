@@ -89,17 +89,17 @@ function tune_eps(init, sampler::Sampler, target::Target, props)
     end
 
     # remove large jumps in the energy
-    E = samples.E - mean(samples.E)
+    E = samples.E .- mean(samples.E)
     #E = remove_jumps(E)
 
     ### compute quantities of interest ###
 
     # typical size of the posterior
     # Avg over samples
-    x1 = mean(samples.Ω, axis=1) #first moments
-    x2 = mean(samples.Ω .^ 2, axis=1) #second moments
+    x1 = mean(samples.Ω) #first moments
+    x2 = mean([sample .^ 2 for sample in samples.Ω]) #second moments
     # Avg over params
-    sigma = sqrt.(mean(x2 - x1.^2)) #average variance over the dimensions
+    sigma = sqrt.(mean(x2 - x1 .^ 2))
 
     # energy fluctuations
     varE = std(E)^2 / target.d #variance per dimension

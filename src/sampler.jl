@@ -74,10 +74,8 @@ end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     """Adds a small noise to u and normalizes."""
-    sett = sampler.settings
-    key = sett.key
-
-    z = sett.nu .* Random_unit_vector(sampler, target; normalize=false)
+    nu = sampler.hyperparameters.nu
+    z = nu .* Random_unit_vector(sampler, target; normalize=false)
     uu = (u .+ z) / sqrt.(sum((u .+ z).^2))
     return uu
 end
@@ -124,7 +122,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
-    println(u)
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
     r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
     return (x, u, g, r, 0.0)
@@ -169,12 +166,12 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     L = sampler.hyperparameters.L
     if [eps, L] == [0.0, 0.0]
         println("Self-tuning hyperparameters")
-        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
+        tune_hyperparameters(init, sampler, target; kwargs...)
     end
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
     sampler.hyperparameters.eps = eps
-    sampler.settings.hyperparameters.L = L
-    sampler.settings.hyperparameters.nu = nu
+    sampler.hyperparameters.L = L
+    sampler.hyperparameters.nu = nu
 
     #TODO: Type
     samples = DataFrame(Ω=Any[], E=Any[])
