@@ -133,22 +133,24 @@ function Energy(target::Target, x, r)
 end
 =#
 
-function Energy(target::Target, x, u)
-    logp = -target.nlogp(x)
-    energy = logp + dot(u, target.grad_nlogp(x))
-    return logp, energy
+function Energy(target::Target, x, xx, E, kinetic_change)
+    nlogp = target.nlogp(x)
+    nllogp = target.nlogp(xx)
+    EE = E + kinetic_change + llogp - logp
+    return -nllogp, EE
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
+    x, u, g, E, time = state
     step = Dynamics(sampler, target, state)
-    x, u, g, kinetic_change, time = step
+    xx, uu, gg, kinetic_change, time = step
     if get(kwargs, :monitor_energy, false)
-        logp, energy = Energy(target, x, u)
+        logp, EE = Energy(target, x, xx, E, kinetic_change)
     else
-        logp, energy = nothing, nothing
+        logp, EE = -targer.nlogp(xx), nothing
     end
-    return step, (target.inv_transform(x), energy, l)
+    return step, (target.inv_transform(x), EE, logp)
 end
 
 function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
