@@ -112,7 +112,7 @@ function Dynamics(sampler::Sampler, target::Target, state)
     # why not this??
     # time += eps
 
-    return xx, uuu, gg, rr, time
+    return xx, uuu, gg, kinetic_change, time
 end
 
 function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
@@ -136,7 +136,7 @@ end
 function Energy(target::Target, x, xx, E, kinetic_change)
     nlogp = target.nlogp(x)
     nllogp = target.nlogp(xx)
-    EE = E + kinetic_change + llogp - logp
+    EE = E + kinetic_change + nllogp - nlogp
     return -nllogp, EE
 end
 
@@ -177,8 +177,8 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     sampler.hyperparameters.nu = nu
 
     #TODO: Type
-    samples = DataFrame(Ω=Any[], E=Any[])
-    push!(samples, (target.inv_transform(x), energy))
+    samples = DataFrame(Ω=Any[], E=Any[], logp=Any[])
+    push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
     for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
         push!(samples, sample)
