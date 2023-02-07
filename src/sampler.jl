@@ -153,6 +153,10 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     return step, (target.inv_transform(x), EE, logp)
 end
 
+function _init_samples()
+    return DataFrame(Ω=Any[], E=Any[], logp=Any[])
+end
+
 function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
@@ -170,7 +174,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     end
 
     #TODO: Type
-    samples = DataFrame(Ω=Any[], E=Any[], logp=Any[])
+    samples = _init_samples()
     for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
         push!(samples, sample)

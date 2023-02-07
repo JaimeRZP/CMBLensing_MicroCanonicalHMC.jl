@@ -1,11 +1,10 @@
-#=
-function ess_corr(x)
+function ess_corr(samples)
     """Taken from: https://blackjax-devs.github.io/blackjax/diagnostics.html
         shape(x) = (num_samples, d)"""
-    input_array = [x, ]
-    num_chains = 1 #input_array.shape[0]
-    num_samples = input_array.shape[1]
-    mean_across_chain = input_array.mean(axis=1, keepdims=True)
+    input_array = samples.Ω
+    num_samples = length(input_array)
+    #
+    mean_across_chain = mean(input_array)
     # Compute autocovariance estimates for every lag for the input array using FFT.
     centered_array = input_array - mean_across_chain
     m = next_fast_len(2 * num_samples)
@@ -70,7 +69,6 @@ function ess_corr(x)
     neff = ess.squeeze() / num_samples
     return 1.0 / mean(1 / neff)
 end
-=#
 
 function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
@@ -80,7 +78,7 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     varE_wanted = sett.varE_wanted
     x, u, g, time = init
 
-    samples = DataFrame(Ω=Any[], E=Any[], logp=Any[])
+    samples = _init_samples()
     for i in 1:sett.tune_samples
         init, sample = Step(sampler, target, init;
                             monitor_energy=true)
@@ -138,7 +136,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
             println("Tuning eps")
         end
         sampler.hyperparameters.eps = 0.5
-        ### first stage: L = sigma sqrt(d)  ###
         for i in 1:sett.tune_maxiter
             if tune_eps(sampler, target, init; kwargs...)
                 break
@@ -146,39 +143,34 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
         end
     end
     if sampler.hyperparameters.L == 0.0
-        sampler.hyperparameters.L = sqrt(target.d)
-    end
-    #=
-    ### second stage: L = epsilon(best) / ESS(correlations)  ###
-    if dialog
-        println("Hyperparameter tuning (second stage)")
-    end
-    n = 10 .^ (LinRange(2, log10(2500), 6))
-    n = append!([2.0], n)
-    n = Int.(round.(n))
-    samples = DataFrame(Ω=Any[], E=Any[])
-    push!(samples, x0)
-    for i in 2:length(n)
-        init = samples[n[i-1]-1].Ω
-        for j in n[i-1]:n[i]
-            init, sample = Step(sampler, target, init; monitor_energy=true)
-            push!(samples, sample)
-        end
-        ESS = ess_corr(samples[:n[i]])
         if dialog
-            println(string("n = ", n[1], "ESS = ", ESS))
+            println("Tuning L")
         end
-        if n[i] > 10.0 / ESS
-            break
+        sampler.hyperparameters.L = sqrt(target.d)
+        steps = 10 .^ (LinRange(2, log10(2500), 6))
+        steps = Int.(round.(steps))
+        samples = _init_samples()
+        for s in steps
+            for i in 1:s
+                init, sample = Step(sampler, target, init; monitor_energy=true)
+                push!(samples, sample)
+            end
+            ESS = ess_corr(samples)
+            if dialog
+                println(string("n = ", n[1], "ESS = ", ESS))
+            end
+            if n[i] > 10.0 / ESS
+                break
+            end
+        end
+        L = 0.4 * eps / ESS # = 0.4 * correlation length
+        if dialog
+            println(string("L / sqrt(d) = ", L / sqrt(target.d),
+                           "ESS(correlations) = ", ESS))
+            println("-------------")
         end
     end
-    L = 0.4 * eps / ESS # = 0.4 * correlation length
-    if dialog
-        println(string("L / sqrt(d) = ", L / sqrt(target.d),
-                       "ESS(correlations) = ", ESS))
-        println("-------------")
-    end
-   =#
+
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
