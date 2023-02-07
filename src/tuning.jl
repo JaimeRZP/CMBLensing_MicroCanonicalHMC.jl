@@ -103,8 +103,7 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     # energy fluctuations
     varE = std(samples.E)^2 / target.d #variance per dimension
     if dialog
-        println("VarE: ", varE)
-        println("eps: ", eps)
+        println("eps: ", eps, " --> VarE: ", varE)
     end
     no_divergences = isfinite(varE)
 
@@ -134,22 +133,21 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
 
     # Init guess
-    sampler.hyperparameters.eps = 0.5
-    sampler.hyperparameters.L = sqrt(target.d)*sampler.hyperparameters.eps
-
-    props = (Inf, 0.0, false)
-
-    if dialog
-        println("Hyperparameter tuning (first stage)")
-    end
-
-    ### first stage: L = sigma sqrt(d)  ###
-    for i in 1:sett.tune_maxiter
-        if tune_eps(sampler, target, init; kwargs...)
-            break
+    if sampler.hyperparameters.eps == 0.0
+        if dialog
+            println("Tuning eps")
+        end
+        sampler.hyperparameters.eps = 0.5
+        ### first stage: L = sigma sqrt(d)  ###
+        for i in 1:sett.tune_maxiter
+            if tune_eps(sampler, target, init; kwargs...)
+                break
+            end
         end
     end
-
+    if sampler.hyperparameters.L == 0.0
+        sampler.hyperparameters.L = sqrt(target.d)
+    end
     #=
     ### second stage: L = epsilon(best) / ESS(correlations)  ###
     if dialog
