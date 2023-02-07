@@ -80,7 +80,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u, r)
+function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -94,17 +94,17 @@ function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, 
     delta_r = @.(log(ch) + log1p(ue * th))
 
     uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
-    rr = r .+ delta_r
-    return uu, rr
+
+    return uu, delta_r
 end
 
 function Dynamics(sampler::Sampler, target::Target, state)
     """One step of the Langevin-like dynamics."""
 
-    x, u, g, r, time = state
+    x, u, g, time = state
 
     # Hamiltonian step
-    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, target, x, g, u, r)
+    xx, gg, uu, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, g, u)
 
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
@@ -123,8 +123,8 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
-    r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
-    return (x, u, g, r, 0.0)
+
+    return (x, u, g, 0.0, 0.0)
 end
 
 #=
@@ -134,19 +134,21 @@ end
 =#
 
 function Energy(target::Target, x, u)
-    return -target.nlogp(x) + dot(u, target.grad_nlogp(x))
+    logp = -target.nlogp(x)
+    energy = logp + dot(u, target.grad_nlogp(x))
+    return logp, energy
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
     step = Dynamics(sampler, target, state)
-    x, u, g, r, time = step
+    x, u, g, kinetic_change, time = step
     if get(kwargs, :monitor_energy, false)
-        energy = Energy(target, x, u)
+        logp, energy = Energy(target, x, u)
     else
-        energy = nothing
+        logp, energy = nothing, nothing
     end
-    return step, (target.inv_transform(x), energy)
+    return step, (target.inv_transform(x), energy, l)
 end
 
 function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
@@ -159,8 +161,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target; kwargs...)
-    x, u, g, r, time = init
-    energy = Energy(target, x, u)
+    x, u, g, E, ime = init
 
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L

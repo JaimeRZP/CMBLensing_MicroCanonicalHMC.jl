@@ -72,7 +72,7 @@ function ess_corr(x)
 end
 =#
 
-function tune_eps(init, sampler::Sampler, target::Target, props)
+function tune_eps(init, sampler::Sampler, target::Target, props; kwargs...)
     sett = sampler.settings
     eps = sampler.hyperparameters.eps
     varE_wanted = sett.varE_wanted
@@ -103,18 +103,24 @@ function tune_eps(init, sampler::Sampler, target::Target, props)
 
     # energy fluctuations
     varE = std(E)^2 / target.d #variance per dimension
+    println(varE)
     no_divergences = isfinite(varE)
 
     ### update the hyperparameters ###
 
     if no_divergences #appropriate eps
-        eps_new = eps * (varE_wanted / varE)^0.25 #assume var[E] ~ eps^4
+        println("a")
+        eps_new = eps*(varE_wanted/varE)^0.25 #assume var[E] ~ eps^4
         success = abs(1.0 - varE / varE_wanted) < 0.2 #we are done
+        println(success, ": ", abs(1.0 - varE / varE_wanted))
         if eps_new > eps_appropriate
+            println("aa")
             eps_appropriate = eps_new
         end
     else
+        println("b")
         if sett.eps < eps_inappropriate
+            println("ba")
             eps_inappropriate = sett.eps
         end
         eps_new = Inf #will be lowered later
@@ -122,9 +128,10 @@ function tune_eps(init, sampler::Sampler, target::Target, props)
 
     # if suggested new eps is inappropriate we switch to bisection
     if eps_new > eps_inappropriate
+        println("c")
         eps_new = 0.5 * (eps_inappropriate + eps_appropriate)
     end
-
+    println(eps_new)
     sampler.hyperparameters.eps = eps_new
 
     #if dialog
@@ -154,7 +161,7 @@ function tune_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
 
     ### first stage: L = sigma sqrt(d)  ###
     for i in 1:sett.tune_maxiter
-        props = tune_eps(init, sampler, target, props)
+        props = tune_eps(init, sampler, target, props; kwargs...)
         if props[end] # success == True
             break
         end
