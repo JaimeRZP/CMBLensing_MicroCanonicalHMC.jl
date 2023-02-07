@@ -56,7 +56,7 @@ function Sampler(eps, L; kwargs...)
     else
         println(string("integrator = ", integrator, "is not a valid option."))
     end
-
+    println(string("L = ", hyperparameters.L, ", eps = ", hyperparameters.eps))
     return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
@@ -163,21 +163,14 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target; kwargs...)
+    tune_hyperparameters(sampler, target, init; kwargs...)
+
     for i in 1:sampler.settings.burn_in
         init, _ = Step(sampler, target, init)
-    end
-    x, u, g, E, ime = init
-
-    eps = sampler.hyperparameters.eps
-    L = sampler.hyperparameters.L
-    if [eps, L] == [0.0, 0.0]
-        println("Self-tuning hyperparameters")
-        tune_hyperparameters(sampler, target, init; kwargs...)
     end
 
     #TODO: Type
     samples = DataFrame(Ω=Any[], E=Any[], logp=Any[])
-    push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
     for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
         push!(samples, sample)
