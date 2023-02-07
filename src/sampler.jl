@@ -120,6 +120,10 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     kwargs = Dict(kwargs)
     ### initial conditions ###
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
+    dialog = get(kwargs, :dialog, false)
+    if kwargs[:dialog]
+        println("starting from x: ", x)
+    end
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
