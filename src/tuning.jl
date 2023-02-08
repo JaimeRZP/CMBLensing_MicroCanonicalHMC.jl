@@ -118,10 +118,6 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
         sampler.hyperparameters.eps = 0.5 * eps
     end
 
-    #if dialog
-    #    word = 'bisection' if (not no_divergences) else 'update'
-    #    print('varE / varE wanted: {} ---'.format(np.round(varE / varE_wanted, 4)) + word + '---> eps: {}, sigma = L / sqrt(d): {}'.format(np.round(eps_new, 3), np.round(L_new / np.sqrt(self.Target.d), 3)))
-
     return success
 end
 
@@ -142,8 +138,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
                 break
             end
         end
-    end
-    if sampler.hyperparameters.L == 0.0
+    elseif sampler.hyperparameters.L == 0.0
         if dialog
             println("Tuning L")
         end
@@ -169,6 +164,10 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
             println(string("L / sqrt(d) = ", L / sqrt(target.d),
                            "ESS(correlations) = ", ESS))
             println("-------------")
+        end
+    else
+        if dialog
+            println("Using given hyperparameters")
         end
     end
 
