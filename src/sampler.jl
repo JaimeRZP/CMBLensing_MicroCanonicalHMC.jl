@@ -60,16 +60,17 @@ function Sampler(eps, L; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(sampler::Sampler, target::Target;
-                            normalize=true)
+function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
     """Generates a random (isotropic) unit vector."""
-    key = sampler.settings.key
-    u = randn(key, target.d)
-    if normalize
-        u ./=  sqrt.(sum(u.^2))
-    end
-    return  u
+    return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
+end
 
+function Random_unit_vector(key, d; normalize = true)
+    u = randn(key, d)
+    if normalize
+        u ./= sqrt(sum(u.^2))
+    end
+    return u
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
