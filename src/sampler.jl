@@ -75,16 +75,27 @@ end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     """Adds a small noise to u and normalizes."""
-    sett = sampler.settings
-    nu = sampler.hyperparameters.nu
-    key = sett.key
+    #sett = sampler.settings
+    #key = sett.key
+    #TODO: keeping to show to jaime, but definitely to remove
 
-    z = nu .* Random_unit_vector(sampler, target; normalize=false)
-    uu = (u .+ z) / sqrt.(sum((u .+ z).^2))
+    #nu = sampler.hyperparameters.nu
+
+    #z = nu .* Random_unit_vector(sampler, target; normalize=false)
+    #uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
+    #return uu
+
+    return Partially_refresh_momentum(sampler.hyperparameters.nu, sampler.settings.key,
+                                      target.d, u; normalize = false)
+end
+
+function Partially_refresh_momentum(nu, key, d, u; normalize = false)
+    z = nu .* Random_unit_vector(key, d; normalize=normalize)
+    uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u)
+function Update_momentum(sampler::Sampler, target::Target, eff_eps::Number, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -126,7 +137,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
-    #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 
     return (x, u, g, 0.0, 0.0)
 end
@@ -140,8 +150,6 @@ function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     end
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
 
-    #sampler.hyperparameters.eps = eps
-    #sampler.hyperparameters.L = L
     sampler.hyperparameters.nu = nu
 end
 
