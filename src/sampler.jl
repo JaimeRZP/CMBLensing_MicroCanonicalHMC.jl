@@ -99,13 +99,16 @@ function Update_momentum(target::Target, eff_eps::Number, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
+    Update_momentum(target.d, eff_eps::Number,g ,u)
+end
 
-    g_norm = sqrt.(sum(g .^2 ))
+function Update_momentum(d::Number, eff_eps::Number,g ,u)
+    g_norm = sqrt(sum(g .^2 ))
     e = - g ./ g_norm
     ue = dot(u, e)
-    sh = sinh.(eff_eps * g_norm ./ target.d)
-    ch = cosh.(eff_eps * g_norm ./ target.d)
-    th = tanh.(eff_eps * g_norm ./ target.d)
+    sh = sinh.(eff_eps * g_norm ./ d)
+    ch = cosh.(eff_eps * g_norm ./ d)
+    th = tanh.(eff_eps * g_norm ./ d)
     delta_r = @.(log(ch) + log1p(ue * th))
 
     uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))

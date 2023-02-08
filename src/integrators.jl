@@ -19,27 +19,31 @@ end
 
 
 function Minimal_norm(sampler::Sampler, target::Target, x, g, u)
-    """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     eps = sampler.hyperparameters.eps
-    L = sampler.hyperparameters.L
     lambda_c = sampler.hyperparameters.lambda_c
+    grad_nlogp = target.grad_nlogp
+    d = target.d
 
+    return Minimal_norm(eps, lambda_c, grad_nlogp, d, x, g, u)
+end
+
+function Minimal_norm(eps, lambda_c, grad_nlogp, d, x, g, u)
+    """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
-    sett = sampler.settings
 
-    uu, dr1 = Update_momentum(target, eps * lambda_c, g, u)
+    uu, dr1 = Update_momentum(d, eps * lambda_c, g, u)
 
     xx = x .+ eps .* 0.5 .* uu
-    gg = target.grad_nlogp(xx) .* target.d ./ (target.d - 1)
+    gg = grad_nlogp(xx) .* (d / (d - 1) )
 
-    uu, dr2 = Update_momentum(target, eps * (1 - 2 * lambda_c), gg, uu)
+    uu, dr2 = Update_momentum(d, eps * (1 - 2 * lambda_c), gg, uu)
 
     xx = xx .+ eps .* 0.5 .* uu
-    gg = target.grad_nlogp(xx) .* target.d / (target.d - 1)
+    gg = grad_nlogp(xx) .* (d / (d - 1) )
 
-    uu, dr3 = Update_momentum(target, eps * lambda_c, gg, uu)
+    uu, dr3 = Update_momentum(d, eps * lambda_c, gg, uu)
 
-    kinetic_change = (dr1 + dr2 + dr3) * (target.d -1)
+    kinetic_change = (dr1 + dr2 + dr3) * (d -1)
 
     return xx, gg, uu, kinetic_change
 end
