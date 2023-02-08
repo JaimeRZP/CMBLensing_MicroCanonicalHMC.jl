@@ -95,7 +95,7 @@ function Partially_refresh_momentum(nu, key, d, u; normalize = false)
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps::Number, g, u)
+function Update_momentum(target::Target, eff_eps::Number, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -145,7 +145,7 @@ function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
     if [eps, L] == [0.0, 0.0]
-        println("Self-tuning hyperparameters")
+        @info "Self-tuning hyperparameters ⏳"
         eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
     end
     nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
@@ -187,7 +187,6 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target; kwargs...)
-    #x, u, g, E, time = init
     tune_hyperparameters(sampler, target, init; kwargs...)
 
     for i in 1:sampler.settings.burn_in

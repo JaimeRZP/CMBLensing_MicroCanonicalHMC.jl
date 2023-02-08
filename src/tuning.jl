@@ -75,7 +75,7 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
     varE_wanted = sett.varE_wanted
-    x, u, g, time = init
+    #x, u, g, time = init
 
     samples = _init_samples()
     for i in 1:sett.tune_samples
@@ -110,6 +110,8 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
         if !success
             #eps_new = eps*(varE_wanted/varE)^0.25 #assume var[E] ~ eps^4
             sampler.hyperparameters.eps = 0.5 * eps
+        else
+            @info "Found eps ✅"
         end
     else
         success = false
@@ -128,7 +130,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     # Init guess
     if sampler.hyperparameters.eps == 0.0
         if dialog
-            println("Tuning eps")
+            @info "Tuning eps ⏳"
         end
         sampler.hyperparameters.eps = 0.5
         for i in 1:sett.tune_maxiter
@@ -136,9 +138,11 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
                 break
             end
         end
+
+    #TODO: is this an elseif or an if?
     elseif sampler.hyperparameters.L == 0.0
         if dialog
-            println("Tuning L")
+            @info "Tuning L ⏳"
         end
         sampler.hyperparameters.L = sqrt(target.d)
         steps = 10 .^ (LinRange(2, log10(2500), 6))
@@ -169,8 +173,14 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
         end
     end
 
-    eps = sampler.hyperparameters.eps
-    L = sampler.hyperparameters.L
-    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
-    sampler.hyperparameters.nu = nu
+    tune_nu!(sampler, target)
+end
+
+function eval_nu(eps, L, d)
+    nu = sqrt((exp(2 * eps / L) - 1.0) / d)
+    return nu
+end
+
+function tune_nu!(spl::Sampler, trg::Target)
+    spl.hyperparameters.nu = eval_nu(spl.hyperparameters.eps, spl.hyperparameters.L, trg.d)
 end
