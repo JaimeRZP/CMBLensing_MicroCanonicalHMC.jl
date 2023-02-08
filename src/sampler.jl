@@ -14,26 +14,26 @@ Hyperparameters(;kwargs...) = begin
 end
 
 mutable struct Settings
-   key::MersenneTwister
-   varE_wanted::Float64
-   tune_burn_in::Int
-   tune_samples::Int
-   tune_maxiter::Int
-   integrator::String
+    key::MersenneTwister
+    varE_wanted::Float64
+    burn_in::Int
+    tune_samples::Int
+    tune_maxiter::Int
+    integrator::String
 end
 
 Settings(;kwargs...) = begin
-   kwargs = Dict(kwargs)
-   seed = get(kwargs, :seed, 0)
-   key = MersenneTwister(seed)
-   varE_wanted = get(kwargs, :varE_wanted, 0.0005)
-   tune_burn_in = get(kwargs, :tune_burn_in, 2000)
-   tune_samples = get(kwargs, :tune_samples, 1000)
-   tune_maxiter = get(kwargs, :tune_maxiter, 10)
-   integrator = get(kwargs, :integrator, "LF")
-   Settings(key,
-            varE_wanted, tune_burn_in, tune_samples, tune_maxiter,
-            integrator)
+    kwargs = Dict(kwargs)
+    seed = get(kwargs, :seed, 0)
+    key = MersenneTwister(seed)
+    varE_wanted = get(kwargs, :varE_wanted, 0.2)
+    burn_in = get(kwargs, :burn_in, 0)
+    tune_samples = get(kwargs, :tune_samples, 1000)
+    tune_maxiter = get(kwargs, :tune_maxiter, 10)
+    integrator = get(kwargs, :integrator, "LF")
+    Settings(key,
+             varE_wanted, burn_in, tune_samples, tune_maxiter,
+             integrator)
 end
 
 struct Sampler
@@ -178,8 +178,13 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target; kwargs...)
-    x, u, g, E, time = init
-    _set_hyperparameters(init, sampler, target; kwargs...)
+    #x, u, g, E, time = init
+    tune_hyperparameters(sampler, target, init; kwargs...)
+
+    for i in 1:sampler.settings.burn_in
+        init, _ = Step(sampler, target, init)
+    end
+    x, u, g, E, _ = init
 
     samples = _init_samples()
     push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
