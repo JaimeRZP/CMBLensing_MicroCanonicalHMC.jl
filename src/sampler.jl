@@ -104,10 +104,10 @@ end
 function Dynamics(sampler::Sampler, target::Target, state)
     """One step of the Langevin-like dynamics."""
 
-    x, u, g, r, time = state
+    x, u, g, time = state
 
     # Hamiltonian step
-    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, target, x, g, u)
+    xx, gg, uu, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, g, u)
 
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
@@ -115,7 +115,7 @@ function Dynamics(sampler::Sampler, target::Target, state)
     # why not this??
     # time += eps
 
-    return xx, uuu, gg, rr, time
+    return xx, uuu, gg, kinetic_change, time
 end
 
 function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
@@ -126,8 +126,8 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
-    r = 0.5 * target.d - target.nlogp(x) / (target.d-1) # initialize r such that all the chains have the same energy = d / 2
-    return (x, u, g, r, 0.0)
+
+    return (x, u, g, 0.0, 0.0)
 end
 
 function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
@@ -144,19 +144,22 @@ function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     sampler.hyperparameters.nu = nu
 end
 
-function Energy(target::Target, x, r)
-    return target.d * r + target.nlogp(x)
+function Energy(target::Target, x, xx, E, kinetic_change)
+    nlogp = target.nlogp(x)
+    nllogp = target.nlogp(xx)
+    EE = E + kinetic_change + nllogp - nlogp
+    return -nllogp, EE
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-    monitor_energy = get(kwargs, :monitor_energy, false)
+    x, u, g, E, time = state
     step = Dynamics(sampler, target, state)
-    x, u, g, r, time = step
+    xx, uu, gg, kinetic_change, time = step
     if get(kwargs, :monitor_energy, false)
-        logp, EE = -target.nlogp(x), Energy(target, x, r)
+        logp, EE = Energy(target, x, xx, E, kinetic_change)
     else
-        logp, EE = -target.nlogp(x), nothing
+        logp, EE = -target.nlogp(xx), nothing
     end
     return step, (target.inv_transform(x), EE, logp)
 end
@@ -175,10 +178,8 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """
 
     init = Get_initial_conditions(sampler, target; kwargs...)
-    x, u, g, r, time = init
-    E = Energy(target, x, r)
+    x, u, g, E, time = init
     _set_hyperparameters(init, sampler, target; kwargs...)
-
 
     samples = _init_samples()
     push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
