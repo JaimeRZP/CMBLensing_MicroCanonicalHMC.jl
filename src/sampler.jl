@@ -133,17 +133,6 @@ function Dynamics(sampler::Sampler, target::Target, state)
     return xx, uuu, gg, kinetic_change, time
 end
 
-function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
-    sett = sampler.settings
-    kwargs = Dict(kwargs)
-    ### initial conditions ###
-    x = get(kwargs, :initial_x, target.prior_draw(sett.key))
-    g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
-    u = Random_unit_vector(sampler, target) #random initial direction
-
-    return (x, u, g, 0.0, 0.0)
-end
-
 function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
@@ -163,11 +152,17 @@ function Energy(target::Target, x, xx, E, kinetic_change)
     return -nllogp, EE
 end
 
-function Energy(target::Target, x, xx, E, kinetic_change)
-    nlogp = target.nlogp(x)
-    nllogp = target.nlogp(xx)
-    EE = E + kinetic_change + nllogp - nlogp
-    return -nllogp, EE
+function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
+    sett = sampler.settings
+    kwargs = Dict(kwargs)
+    ### initial conditions ###
+    x = get(kwargs, :initial_x, target.prior_draw(sett.key))
+    g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
+    u = Random_unit_vector(sampler, target) #random initial direction
+
+    sample = (target.inv_transform(x), 0.0, -target.nlogp(x))
+    state = (x, u, g, 0.0, 0.0)
+    return state, sample
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
@@ -187,7 +182,22 @@ function _init_samples()
     return DataFrame(Ω=Any[], E=Any[], logp=Any[])
 end
 
-function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
+function _init_samples(target::Target, extra_vars)
+    df = DataFrame()
+
+    for vsym in target.vsyms
+        df[!, Symbol(vsym)] = Any[]
+    end
+
+    for var in extra_vars
+        df[!, var] = Any[]
+    end
+
+    return df
+end
+
+function Sample(sampler::Sampler, target::Target,
+                num_steps::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -196,18 +206,17 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
             samples (shape = (num_steps, self.Target.d))
     """
 
-    init = Get_initial_conditions(sampler, target; kwargs...)
-    tune_hyperparameters(sampler, target, init; kwargs...)
+    state, sample = Get_initial_conditions(sampler, target; kwargs...)
+    tune_hyperparameters(sampler, target, state; kwargs...)
 
     for i in 1:sampler.settings.burn_in
-        init, _ = Step(sampler, target, init)
+        state, sample = Step(sampler, target, state)
     end
-    x, u, g, E, _ = init
 
     samples = _init_samples()
-    push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
+    push!(samples, sample)
     for i in 1:num_steps
-        init, sample = Step(sampler, target, init; kwargs...)
+        state, sample = Step(sampler, target, state; kwargs...)
         push!(samples, sample)
     end
 

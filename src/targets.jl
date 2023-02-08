@@ -1,5 +1,8 @@
 mutable struct TuringTarget <: Target
+    model::DynamicPPL.Model
     d::Int
+    vsyms
+    dists
     nlogp::Function
     grad_nlogp::Function
     transform::Function
@@ -46,7 +49,11 @@ TuringTarget(model; kwargs...) = begin
         return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
-    TuringTarget(d,
+    TuringTarget(
+               model,
+               d,
+               vsyms,
+               dists,
                nlogp,
                grad_nlogp,
                transform,
