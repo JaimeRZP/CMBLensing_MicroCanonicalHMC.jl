@@ -8,7 +8,7 @@ using Interpolations, LinearAlgebra, Statistics, DynamicPPL, Turing, FFTW
 using Distributions, Random, ForwardDiff, Zygote, AbstractMCMC
 using LogDensityProblems, LogDensityProblemsAD, DataFrames
 
-abstract type Target end
+abstract type Target <: AbstractMCMC.AbstractModel end
 
 include("sampler.jl")
 include("targets.jl")
