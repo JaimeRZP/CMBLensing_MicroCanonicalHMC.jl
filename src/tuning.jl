@@ -1,4 +1,16 @@
-#=
+function positive_sequence_body_fn(state, mask_t)
+    t, carry_cond, max_t = state
+    next_mask = carry_cond & mask_t
+    next_max_t = jnp.where(next_mask, jnp.ones_like(max_t) * t, max_t)
+    return (t + 1, next_mask, next_max_t), next_mask
+end
+
+function monotone_sequence_body_fn(rho_hat_sum_tm1, rho_hat_sum_t)
+    update_mask = rho_hat_sum_t > rho_hat_sum_tm1
+    next_rho_hat_sum_t = jnp.where(update_mask, rho_hat_sum_tm1, rho_hat_sum_t)
+    return next_rho_hat_sum_t, (update_mask, next_rho_hat_sum_t)
+end
+
 function ess_corr(samples)
     """Taken from: https://blackjax-devs.github.io/blackjax/diagnostics.html
         shape(x) = (num_samples, d)"""
@@ -22,6 +34,8 @@ function ess_corr(samples)
     #                            operand=None)
 
     # Geyer's initial positive sequence
+
+    (*_, max_t_next), mask = jax.lax.scan(positive_sequence_body_fn, (0, carry_cond, max_t), mask0)
     num_samples_even = num_samples - mod(num_samples, 2)
     mean_autocov_var_tp1 = mean_auto_cov[1:num_samples_even] #jnp.take(mean_autocov_var, jnp.arange(1, num_samples_even), axis=1)
     rho_hat = jnp.concatenate([jnp.ones_like(mean_var0), 1.0 - (mean_var0 - mean_autocov_var_tp1) / weighted_var,], axis=1,)
@@ -31,14 +45,6 @@ function ess_corr(samples)
     mask0 = (rho_hat_even + rho_hat_odd) > 0.0
     carry_cond = jnp.ones_like(mask0[0])
     max_t = jnp.zeros_like(mask0[0], dtype=int)
-    def positive_sequence_body_fn(state, mask_t):
-        t, carry_cond, max_t = state
-        next_mask = carry_cond & mask_t
-        next_max_t = jnp.where(next_mask, jnp.ones_like(max_t) * t, max_t)
-        return (t + 1, next_mask, next_max_t), next_mask
-    (*_, max_t_next), mask = jax.lax.scan(
-        positive_sequence_body_fn, (0, carry_cond, max_t), mask0
-    )
     indices = jnp.indices(max_t_next.shape)
     indices = tuple([max_t_next + 1] + [indices[i] for i in range(max_t_next.ndim)])
     rho_hat_odd = jnp.where(mask, rho_hat_odd, jnp.zeros_like(rho_hat_odd))
@@ -46,10 +52,7 @@ function ess_corr(samples)
     mask_even = mask.at[indices].set(rho_hat_even[indices] > 0)
     rho_hat_even = jnp.where(mask_even, rho_hat_even, jnp.zeros_like(rho_hat_even))
     # Geyer's initial monotone sequence
-    def monotone_sequence_body_fn(rho_hat_sum_tm1, rho_hat_sum_t):
-        update_mask = rho_hat_sum_t > rho_hat_sum_tm1
-        next_rho_hat_sum_t = jnp.where(update_mask, rho_hat_sum_tm1, rho_hat_sum_t)
-        return next_rho_hat_sum_t, (update_mask, next_rho_hat_sum_t)
+
     rho_hat_sum = rho_hat_even + rho_hat_odd
     _, (update_mask, update_value) = jax.lax.scan(
         monotone_sequence_body_fn, rho_hat_sum[0], rho_hat_sum
@@ -69,7 +72,7 @@ function ess_corr(samples)
     neff = ess.squeeze() / num_samples
     return 1.0 / mean(1 / neff)
 end
-=#
+
 
 function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
