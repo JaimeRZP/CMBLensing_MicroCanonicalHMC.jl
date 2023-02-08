@@ -83,7 +83,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u, r)
+function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
@@ -97,8 +97,8 @@ function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, 
     delta_r = @.(log(ch) + log1p(ue * th))
 
     uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
-    rr = r .+ delta_r
-    return uu, rr
+
+    return uu, delta_r
 end
 
 function Dynamics(sampler::Sampler, target::Target, state)
@@ -107,7 +107,7 @@ function Dynamics(sampler::Sampler, target::Target, state)
     x, u, g, r, time = state
 
     # Hamiltonian step
-    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, target, x, g, u, r)
+    xx, gg, uu, rr = sampler.hamiltonian_dynamics(sampler, target, x, g, u)
 
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)

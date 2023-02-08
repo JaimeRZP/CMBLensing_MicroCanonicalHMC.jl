@@ -1,41 +1,45 @@
-function Leapfrog(sampler::Sampler, target::Target, x, g, u, r)
-    sett = sampler.settings
+function Leapfrog(sampler::Sampler, target::Target, x, g, u)
     eps = sampler.hyperparameters.eps
-    L =  sampler.hyperparameters.L
+    L = sampler.hyperparameters.L
+    lambda_c = sampler.hyperparameters.lambda_c
 
-    uu, rr = Update_momentum(sampler, target, eps * 0.5, g, u, r)
+    uu, dr1 = Update_momentum(sampler, target, eps * 0.5, g, u)
 
     #full step in x
-    xx = x .+ sett.eps .* uu
+    xx = x .+ eps .* uu
     gg = target.grad_nlogp(xx) .* target.d ./ (target.d - 1)
 
     #half step in momentum
-    uu, rr = Update_momentum(sampler, target, eps * 0.5, gg, uu, rr)
+    uu, dr2 = Update_momentum(sampler, target, eps * 0.5, gg, uu)
 
-    return xx, gg, uu, rr
+    kinetic_change = (dr1 + dr2) * target.d
+
+    return xx, gg, uu, kinetic_change
 end
 
 
-function Minimal_norm(sampler::Sampler, target::Target, x, g, u, r)
+function Minimal_norm(sampler::Sampler, target::Target, x, g, u)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
+    eps = sampler.hyperparameters.eps
+    L = sampler.hyperparameters.L
+    lambda_c = sampler.hyperparameters.lambda_c
 
     # V T V T V
     sett = sampler.settings
-    eps = sampler.hyperparameters.eps
-    L =  sampler.hyperparameters.L
-    lambda_c =  sampler.hyperparameters.lambda_c
 
-    uu, rr = Update_momentum(sampler, target, eps * lambda_c, g, u, r)
+    uu, dr1 = Update_momentum(sampler, target, eps * lambda_c, g, u)
 
     xx = x .+ eps .* 0.5 .* uu
     gg = target.grad_nlogp(xx) .* target.d ./ (target.d - 1)
 
-    uu, rr = Update_momentum(sampler, target, eps * (1 - 2 * lambda_c), gg, uu, rr)
+    uu, dr2 = Update_momentum(sampler, target, eps * (1 - 2 * lambda_c), gg, uu)
 
     xx = xx .+ eps .* 0.5 .* uu
     gg = target.grad_nlogp(xx) .* target.d / (target.d - 1)
 
-    uu, rr = Update_momentum(sampler, target, eps * lambda_c, gg, uu, rr)
+    uu, dr3 = Update_momentum(sampler, target, eps * lambda_c, gg, uu)
 
-    return xx, gg, uu, rr
+    kinetic_change = (dr1 + dr2 + dr3) * (target.d -1)
+
+    return xx, gg, uu, kinetic_change
 end
