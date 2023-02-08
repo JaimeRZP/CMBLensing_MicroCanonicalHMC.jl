@@ -67,6 +67,7 @@ function ess_corr(samples)
     neff = ess.squeeze() / num_samples
     return 1.0 / mean(1 / neff)
 end
+=#
 
 function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
@@ -144,6 +145,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
             @info "Tuning L ⏳"
         end
         sampler.hyperparameters.L = sqrt(target.d)
+        #=
         steps = 10 .^ (LinRange(2, log10(2500), 6))
         steps = Int.(round.(steps))
         samples = _init_samples()
@@ -166,6 +168,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
                            "ESS(correlations) = ", ESS))
             println("-------------")
         end
+        =#
     else
         if dialog
             println("Using given hyperparameters")
