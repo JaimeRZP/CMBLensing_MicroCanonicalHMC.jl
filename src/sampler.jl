@@ -120,10 +120,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     kwargs = Dict(kwargs)
     ### initial conditions ###
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
-    dialog = get(kwargs, :dialog, false)
-    if kwargs[:dialog]
-        println("starting from x: ", x)
-    end
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
     #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
@@ -161,7 +157,7 @@ function _init_samples()
     return DataFrame(Ω=Any[], E=Any[], logp=Any[])
 end
 
-function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
+function Sample(sampler::Sampler, target::Target, num_steps::Int; dialog=false, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -176,9 +172,11 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     for i in 1:sampler.settings.burn_in
         init, _ = Step(sampler, target, init)
     end
+    x, u, g, E, _ = init
 
     #TODO: Type
     samples = _init_samples()
+    push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
     for i in 1:num_steps
         init, sample = Step(sampler, target, init; kwargs...)
         push!(samples, sample)
