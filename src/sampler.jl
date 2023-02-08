@@ -1,16 +1,16 @@
 mutable struct Hyperparameters{T}
-     eps ::T
-     L::T
-     nu::T
-     lambda_c::T
+    eps ::T
+    L::T
+    nu::T
+    lambda_c::T
 end
 
 Hyperparameters(;kwargs...) = begin
-    eps = get(kwargs, :eps, 0.0)
-    L = get(kwargs, :L, 0.0)
-    nu = get(kwargs, :nu, 0.0)
-    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
-    Hyperparameters(eps, L, nu, lambda_c)
+   eps = get(kwargs, :eps, 0.0)
+   L = get(kwargs, :L, 0.0)
+   nu = get(kwargs, :nu, 0.0)
+   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
+   Hyperparameters(eps, L, nu, lambda_c)
 end
 
 mutable struct Settings
@@ -37,60 +37,78 @@ Settings(;kwargs...) = begin
 end
 
 struct Sampler
-    settings::Settings
-    hyperparameters::Hyperparameters
-    hamiltonian_dynamics::Function
+   settings::Settings
+   hyperparameters::Hyperparameters
+   hamiltonian_dynamics::Function
 end
 
 function Sampler(eps, L; kwargs...)
 
-    sett = Settings(;kwargs...)
-    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
+   sett = Settings(;kwargs...)
+   hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
 
-    if sett.integrator == "LF"  # leapfrog
-        hamiltonian_dynamics = Leapfrog
-        grad_evals_per_step = 1.0
-    elseif sett.integrator == "MN"  # minimal norm integrator
-        hamiltonian_dynamics = Minimal_norm
-        grad_evals_per_step = 2.0
-    else
-        println(string("integrator = ", integrator, "is not a valid option."))
-    end
-    println(string("L = ", hyperparameters.L, ", eps = ", hyperparameters.eps))
-    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
+   if sett.integrator == "LF"  # leapfrog
+       hamiltonian_dynamics = Leapfrog
+       grad_evals_per_step = 1.0
+   elseif sett.integrator == "MN"  # minimal norm integrator
+       hamiltonian_dynamics = Minimal_norm
+       grad_evals_per_step = 2.0
+   else
+       println(string("integrator = ", integrator, "is not a valid option."))
+   end
+
+   return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(sampler::Sampler, target::Target;
-                            normalize=true)
+function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
     """Generates a random (isotropic) unit vector."""
-    key = sampler.settings.key
-    u = randn(key, target.d)
-    if normalize
-        u ./=  sqrt.(sum(u.^2))
-    end
-    return  u
+    return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
+end
 
+function Random_unit_vector(key, d; normalize = true)
+    u = randn(key, d)
+    if normalize
+        u ./= sqrt(sum(u.^2))
+    end
+    return u
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u)
     """Adds a small noise to u and normalizes."""
-    nu = sampler.hyperparameters.nu
-    z = nu .* Random_unit_vector(sampler, target; normalize=false)
-    uu = (u .+ z) / sqrt.(sum((u .+ z).^2))
+    #sett = sampler.settings
+    #key = sett.key
+    #TODO: keeping to show to jaime, but definitely to remove
+
+    #nu = sampler.hyperparameters.nu
+
+    #z = nu .* Random_unit_vector(sampler, target; normalize=false)
+    #uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
+    #return uu
+
+    return Partially_refresh_momentum(sampler.hyperparameters.nu, sampler.settings.key,
+                                      target.d, u; normalize = false)
+end
+
+function Partially_refresh_momentum(nu, key, d, u; normalize = false)
+    z = nu .* Random_unit_vector(key, d; normalize=normalize)
+    uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end
 
-function Update_momentum(sampler::Sampler, target::Target, eff_eps::Float64, g, u)
+function Update_momentum(target::Target, eff_eps::Number, g, u)
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
+    Update_momentum(target.d, eff_eps::Number,g ,u)
+end
 
-    g_norm = sqrt.(sum(g .^2 ))
+function Update_momentum(d::Number, eff_eps::Number,g ,u)
+    g_norm = sqrt(sum(g .^2 ))
     e = - g ./ g_norm
     ue = dot(u, e)
-    sh = sinh.(eff_eps * g_norm ./ target.d)
-    ch = cosh.(eff_eps * g_norm ./ target.d)
-    th = tanh.(eff_eps * g_norm ./ target.d)
+    sh = sinh.(eff_eps * g_norm ./ d)
+    ch = cosh.(eff_eps * g_norm ./ d)
+    th = tanh.(eff_eps * g_norm ./ d)
     delta_r = @.(log(ch) + log1p(ue * th))
 
     uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
@@ -122,14 +140,27 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     x = get(kwargs, :initial_x, target.prior_draw(sett.key))
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
-    #u = - g / jnp.sqrt(jnp.sum(jnp.square(g))) #initialize momentum in the direction of the gradient of log p
 
     return (x, u, g, 0.0, 0.0)
 end
 
-#=
-function Energy(target::Target, x, r)
-    return target.d * r + target.nlogp(x)
+function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
+    eps = sampler.hyperparameters.eps
+    L = sampler.hyperparameters.L
+    if [eps, L] == [0.0, 0.0]
+        @info "Self-tuning hyperparameters ⏳"
+        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
+    end
+    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
+
+    sampler.hyperparameters.nu = nu
+end
+
+function Energy(target::Target, x, xx, E, kinetic_change)
+    nlogp = target.nlogp(x)
+    nllogp = target.nlogp(xx)
+    EE = E + kinetic_change + nllogp - nlogp
+    return -nllogp, EE
 end
 =#
 
@@ -157,7 +188,7 @@ function _init_samples()
     return DataFrame(Ω=Any[], E=Any[], logp=Any[])
 end
 
-function Sample(sampler::Sampler, target::Target, num_steps::Int; dialog=false, kwargs...)
+function Sample(sampler::Sampler, target::Target, num_steps::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -174,7 +205,6 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int; dialog=false, 
     end
     x, u, g, E, _ = init
 
-    #TODO: Type
     samples = _init_samples()
     push!(samples, (target.inv_transform(x), E, -target.nlogp(x)))
     for i in 1:num_steps
