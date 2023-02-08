@@ -36,7 +36,7 @@ Settings(;kwargs...) = begin
              integrator)
 end
 
-struct Sampler
+struct Sampler <: AbstractMCMC.AbstractSampler
    settings::Settings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function
@@ -162,7 +162,6 @@ function Energy(target::Target, x, xx, E, kinetic_change)
     EE = E + kinetic_change + nllogp - nlogp
     return -nllogp, EE
 end
-=#
 
 function Energy(target::Target, x, xx, E, kinetic_change)
     nlogp = target.nlogp(x)
