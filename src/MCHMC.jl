@@ -4,9 +4,9 @@ export Settings, Hyperparameters, Sampler, Sample
 export Leapfrog, Minimal_norm
 export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
-using Interpolations, LinearAlgebra, Statistics, DynamicPPL, Turing, FFTW
-using Distributions, Random, ForwardDiff, Zygote, AbstractMCMC
-using LogDensityProblems, LogDensityProblemsAD, DataFrames
+using Interpolations, LinearAlgebra, Statistics, FFTW, Distributions, Random, DataFrames
+using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
+using AbstractMCMC, MCMCChains
 
 abstract type Target <: AbstractMCMC.AbstractModel end
 
