@@ -160,7 +160,7 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
 
-    sample = (target.inv_transform(x), 0.0, -target.nlogp(x))
+    sample = (target.inv_transform(x), [0.0, -target.nlogp(x)])
     state = (x, u, g, 0.0, 0.0)
     return state, sample
 end
@@ -175,25 +175,30 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     else
         logp, EE = -target.nlogp(xx), nothing
     end
-    return step, (target.inv_transform(x), EE, logp)
+    return step, (target.inv_transform(x), [EE, logp])
 end
 
 function _init_samples()
-    return DataFrame(Ω=Any[], E=Any[], logp=Any[])
+    return DataFrame(Ω=Any[], stats=Any[])
 end
 
-function _init_samples(target::Target, extra_vars)
+function _init_samples(target::Target, stats)
     df = DataFrame()
 
     for vsym in target.vsyms
         df[!, Symbol(vsym)] = Any[]
     end
 
-    for var in extra_vars
-        df[!, var] = Any[]
+    for stat in stats
+        df[!, stat] = Any[]
     end
 
     return df
+end
+
+function _save_samples(samples::DataFrame, sample)
+    params, stats = sample
+    push!(samples, [params; stats])
 end
 
 function Sample(sampler::Sampler, target::Target,

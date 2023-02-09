@@ -98,7 +98,8 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     #sigma = sqrt.(mean(x2 - x1 .^ 2))
 
     # energy fluctuations
-    varE = std(samples.E)^2 / target.d #variance per dimension
+    E = [stat[1] for stat in samples.stats]
+    varE = std(E)^2 / target.d #variance per dimension
     if dialog
         println("eps: ", eps, " --> VarE: ", varE)
     end

@@ -17,16 +17,17 @@ end
 function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
                                  sampler::AbstractMCMC.AbstractSampler,
                                  N::Integer;
+                                 save_state=true,
+                                 burn_in = 0,
                                  progress=PROGRESS[],
                                  progressname="Sampling",
                                  callback=nothing,
-                                 discard_initial=0,
                                  thinning=1,
                                  chain_type::Type=AbstractMCMC.AbstractChains,
                                  kwargs...)
     # Check the number of requested samples.
     N > 0 || error("the number of samples must be ≥ 1")
-    Ntotal = thinning * (N - 1) + discard_initial + 1
+    Ntotal = thinning * (N - 1) + burn_in + 1
 
     # Start the timer
     start = time()
@@ -44,8 +45,8 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             next_update = threshold
         end
 
-        # Discard initial samples.
-        for i in 1:discard_initial
+        # Discard burn in.
+        for i in 1:burn_in
             # Update the progress bar.
             if progress && i >= next_update
                 AbstractMCMC.ProgressLogging.@logprogress i / Ntotal
@@ -57,15 +58,14 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
         end
 
         # Run callback.
-        # WTF is this?
-        #callback === nothing || callback(rng, model, sampler, sample, state, 1; kwargs...)
+        callback === nothing || callback(rng, model, sampler, sample, state, 1; kwargs...)
 
         # Save the sample.
         samples = AbstractMCMC.samples(sample, target, sampler, N; kwargs...)
         samples = AbstractMCMC.save!!(samples, sample, 1, target, sampler, N; kwargs...)
 
         # Update the progress bar.
-        itotal = 1 + discard_initial
+        itotal = 1 + burn_in
         if progress && itotal >= next_update
             AbstractMCMC.ProgressLogging.@logprogress itotal / Ntotal
             next_update = itotal + threshold
@@ -89,9 +89,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             state, sample = AbstractMCMC.step(sampler, target, state; kwargs...)
 
             # Run callback.
-            # WTF does this do?
-            #callback === nothing ||
-            #    callback(rng, model, sampler, sample, state, i; kwargs...)
+            callback === nothing || callback(rng, model, sampler, sample, state, i; kwargs...)
 
             # Save the sample.
             samples = AbstractMCMC.save!!(samples, sample, 1, target, sampler, N; kwargs...)
@@ -109,68 +107,43 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     duration = stop - start
     stats = AbstractMCMC.SamplingStats(start, stop, duration)
 
-    return samples
-    #=
     return AbstractMCMC.bundle_samples(samples,
                                        target,
                                        sampler,
                                        state,
                                        chain_type;
+                                       save_state=save_state,
                                        stats=stats,
-                                       discard_initial=discard_initial,
+                                       burn_in=burn_in,
                                        thinning=thinning,
                                        kwargs...)
-    =#
 end
 
-function _init_samples(target::Target, extra_vars)
-    df = DataFrame()
 
-    for vsym in target.vsyms
-        df[!, Symbol(vsym)] = Any[]
-    end
-
-    for var in extra_vars
-        df[!, var] = Any[]
-    end
-
-    return df
-end
-
-function _push_samples(df::DataFrame, sample)
-    params, stats = sample
-    push!(samples, [params; stats])
-end
-
-#=
 function AbstractMCMC.bundle_samples(
-    vals::Vector,
-    model::AbstractModel,
-    spl::Union{Sampler{<:InferenceAlgorithm},SampleFromPrior},
+    samples::Vector,
+    target::AbstractMCMC.AbstractModel,
+    sampler::AbstractMCMC.AbstractSampler,
     state,
     chain_type::Type{MCMCChains.Chains};
-    save_state = false,
+    save_state = true,
     stats = missing,
-    discard_initial = 0,
+    burn_in = 0,
     thinning = 1,
-    kwargs...
-)
-    # Convert transitions to array format.
-    # Also retrieve the variable names.
+    kwargs...)
 
-    # Get the values of the extra parameters in each transition.
-    extra_params, extra_values = get_transition_extras(ts)
-
-    # Extract names & construct param array.
-    nms = [nms; extra_params]
-    parray = hcat(vals, extra_values)
-
-    # Get the average or final log evidence, if it exists.
-    le = getlogevidence(ts, spl, state)
+    param_names = target.vsyms
+    internal_names = [:E, :logp]
+    names = [param_names; internal_names]
+    params = []
+    for sample in samples
+        param, internal = sample
+        push!(params, [param; internal])
+    end
 
     # Set up the info tuple.
     if save_state
-        info = (model = model, sampler = spl, samplerstate = state)
+        info = (model=model, sampler=spl, samplerstate=state)
     else
         info = NamedTuple()
     end
@@ -181,19 +154,16 @@ function AbstractMCMC.bundle_samples(
     end
 
     # Conretize the array before giving it to MCMCChains.
-    parray = MCMCChains.concretize(parray)
+    params = MCMCChains.concretize(params)
 
     # Chain construction.
     chain = MCMCChains.Chains(
-        parray,
-        nms,
-        (internals = extra_params,);
-        evidence=le,
+        params,
+        param_names,
+        (internals = internal_names,);
         info=info,
         start=discard_initial + 1,
-        thin=thinning,
-    )
+        thin=thinning)
 
     return chain
 end
-=#
