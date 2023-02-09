@@ -65,6 +65,10 @@ function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
     return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
 end
 
+function MCHMC(; kwargs...)
+    return MCHMC(0.0, 0.0; kwargs...)
+end
+
 function Random_unit_vector(key, d; normalize = true)
     u = randn(key, d)
     if normalize
