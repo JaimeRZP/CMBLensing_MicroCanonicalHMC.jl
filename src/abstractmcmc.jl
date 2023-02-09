@@ -1,6 +1,22 @@
 
 const PROGRESS = Ref(true)
 
+function resume(chain::MCMCChains.Chains, args...;
+                progress=PROGRESS[], kwargs...)
+    isempty(chain.info) && error("cannot resume from a chain without state info")
+
+    # Sample a new chain.
+    return AbstractMCMC.mcmcsample(
+        chain.info[:target],
+        chain.info[:sampler],
+        args...;
+        resume_from = chain,
+        chain_type = MCMCChains.Chains,
+        progress = progress,
+        kwargs...
+    )
+end
+
 function AbstractMCMC.step(sampler::Sampler, target::Target, state; kwargs...)
     return Step(sampler::Sampler, target::Target, state; kwargs...)
 end
@@ -8,10 +24,15 @@ end
 function AbstractMCMC.sample(model::DynamicPPL.Model,
                              sampler::AbstractMCMC.AbstractSampler,
                              N::Int;
+                             resume_from=nothing,
                              kwargs...)
     # Get target
     target = TuringTarget(model)
-    return AbstractMCMC.mcmcsample(target, sampler, N; kwargs...)
+    if resume_from === nothing
+        return AbstractMCMC.mcmcsample(target, sampler, N; kwargs...)
+    else
+        return resume(resume_from, N; kwargs...)
+    end
 end
 
 function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
