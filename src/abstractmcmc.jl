@@ -1,20 +1,15 @@
 
 const PROGRESS = Ref(true)
 
-function resume(chain::MCMCChains.Chains, args...;
-                progress=PROGRESS[], kwargs...)
+function resume(chain::MCMCChains.Chains, N; kwargs...)
     isempty(chain.info) && error("cannot resume from a chain without state info")
 
     # Sample a new chain.
     return AbstractMCMC.mcmcsample(
         chain.info[:target],
         chain.info[:sampler],
-        args...;
-        resume_from = chain,
-        chain_type = MCMCChains.Chains,
-        progress = progress,
-        kwargs...
-    )
+        N;
+        kwargs...)
 end
 
 function AbstractMCMC.step(sampler::Sampler, target::Target, state; kwargs...)
