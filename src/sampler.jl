@@ -164,7 +164,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     state = (x, u, g, 0.0, 0.0)
     return state, sample
 end
-=#
 
 function Energy(target::Target, x, u)
     return -target.nlogp(x) + dot(u, target.grad_nlogp(x))
