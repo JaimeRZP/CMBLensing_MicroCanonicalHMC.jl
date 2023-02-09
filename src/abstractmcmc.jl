@@ -11,7 +11,6 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
                              kwargs...)
     # Get target
     target = TuringTarget(model)
-    println("hello")
     return AbstractMCMC.mcmcsample(target, sampler, N; kwargs...)
 end
 
@@ -25,7 +24,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
                                  callback=nothing,
                                  thinning=1,
                                  kwargs...)
-    println("world")
+
     # Check the number of requested samples.
     N > 0 || error("the number of samples must be ≥ 1")
     Ntotal = thinning * (N - 1) + burn_in + 1
@@ -131,7 +130,6 @@ function foo( #AbstractMCMC.bundle_samples(
     thinning = 1,
     kwargs...)
 
-    println("out there")
     param_names = target.vsyms
     internal_names = [:E, :logp]
     names = [param_names; internal_names]
