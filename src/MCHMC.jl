@@ -1,6 +1,6 @@
 module MCHMC
 
-export Settings, Hyperparameters, Sampler, Sample
+export Settings, Hyperparameters, MCHMC, Sample
 export Leapfrog, Minimal_norm
 export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
