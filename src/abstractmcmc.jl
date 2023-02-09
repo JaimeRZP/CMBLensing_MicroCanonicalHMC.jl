@@ -11,6 +11,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
                              kwargs...)
     # Get target
     target = TuringTarget(model)
+    println("hello")
     return AbstractMCMC.mcmcsample(target, sampler, N; kwargs...)
 end
 
@@ -23,8 +24,8 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
                                  progressname="Sampling",
                                  callback=nothing,
                                  thinning=1,
-                                 chain_type::Type=AbstractMCMC.AbstractChains,
                                  kwargs...)
+    println("world")
     # Check the number of requested samples.
     N > 0 || error("the number of samples must be ≥ 1")
     Ntotal = thinning * (N - 1) + burn_in + 1
@@ -58,7 +59,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
         end
 
         # Run callback.
-        callback === nothing || callback(rng, model, sampler, sample, state, 1; kwargs...)
+        callback === nothing || callback(rng, target, sampler, sample, state, 1; kwargs...)
 
         # Save the sample.
         samples = AbstractMCMC.samples(sample, target, sampler, N; kwargs...)
@@ -89,7 +90,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             state, sample = AbstractMCMC.step(sampler, target, state; kwargs...)
 
             # Run callback.
-            callback === nothing || callback(rng, model, sampler, sample, state, i; kwargs...)
+            callback === nothing || callback(rng, target, sampler, sample, state, i; kwargs...)
 
             # Save the sample.
             samples = AbstractMCMC.save!!(samples, sample, 1, target, sampler, N; kwargs...)
@@ -107,31 +108,30 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     duration = stop - start
     stats = AbstractMCMC.SamplingStats(start, stop, duration)
 
-    return AbstractMCMC.bundle_samples(samples,
-                                       target,
-                                       sampler,
-                                       state,
-                                       chain_type;
-                                       save_state=save_state,
-                                       stats=stats,
-                                       burn_in=burn_in,
-                                       thinning=thinning,
-                                       kwargs...)
+    return foo( #AbstractMCMC.bundle_samples(
+    samples,
+    target,
+    sampler,
+    state;
+    save_state=save_state,
+    stats=stats,
+    burn_in=burn_in,
+    thinning=thinning,
+    kwargs...)
 end
 
-
-function AbstractMCMC.bundle_samples(
+function foo( #AbstractMCMC.bundle_samples(
     samples::Vector,
     target::AbstractMCMC.AbstractModel,
     sampler::AbstractMCMC.AbstractSampler,
-    state,
-    chain_type::Type{MCMCChains.Chains};
+    state;
     save_state = true,
     stats = missing,
     burn_in = 0,
     thinning = 1,
     kwargs...)
 
+    println("out there")
     param_names = target.vsyms
     internal_names = [:E, :logp]
     names = [param_names; internal_names]
@@ -143,7 +143,7 @@ function AbstractMCMC.bundle_samples(
 
     # Set up the info tuple.
     if save_state
-        info = (model=model, sampler=spl, samplerstate=state)
+        info = (target=target, sampler=sampler, state=state)
     else
         info = NamedTuple()
     end
@@ -159,10 +159,10 @@ function AbstractMCMC.bundle_samples(
     # Chain construction.
     chain = MCMCChains.Chains(
         params,
-        param_names,
+        names,
         (internals = internal_names,);
         info=info,
-        start=discard_initial + 1,
+        start=burn_in + 1,
         thin=thinning)
 
     return chain
