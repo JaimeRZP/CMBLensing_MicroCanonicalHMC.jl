@@ -10,10 +10,13 @@ function ess_corr(target::Target, samples)
 
     ### my part (combine all dimensions): ###
     neff = esss ./ length(samples)
-    return 1.0 / mean(1 / neff)
+    return 1.0 / mean(1 ./ neff)
 end
 
-function tune_L!(sampler::Sampler, targer::Target, init; kwargs...)
+function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
+    dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    eps = sampler.hyperparameters.eps
     sampler.hyperparameters.L = sqrt(target.d)
     steps = 10 .^ (LinRange(2, log10(2500), sett.tune_maxiter))
     steps = Int.(round.(steps))
@@ -23,22 +26,23 @@ function tune_L!(sampler::Sampler, targer::Target, init; kwargs...)
             init, sample = Step(sampler, target, init; monitor_energy=true)
             push!(samples, sample)
         end
-        ESS = ess_corr(samples)
+        ESS = ess_corr(target, samples)
         if dialog
             println(string("samples: ", length(samples), "--> ESS: ", ESS))
         end
         if length(samples) > 10.0 / ESS
+            @info string("Found L: ", sampler.hyperparameters.L, " ✅")
+            sampler.hyperparameters.L = 0.4 * eps / ESS # = 0.4 * correlation length
             break
         end
     end
-    sampler.hyperparameters.L = 0.4 * eps / ESS # = 0.4 * correlation length
 end
 
 function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     eps = sampler.hyperparameters.eps
-    L = sampler.hyperparameters.L
+    L = sqrt(target.d) #sampler.hyperparameters.L
     varE_wanted = sett.varE_wanted
     #x, u, g, time = init
 
@@ -64,7 +68,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
             #eps_new = eps*(varE_wanted/varE)^0.25 #assume var[E] ~ eps^4
             sampler.hyperparameters.eps = 0.5 * eps
         else
-            @info "Found eps ✅"
+            @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
         end
     else
         success = false
@@ -91,21 +95,17 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
 
     # Init guess
     if sampler.hyperparameters.eps == 0.0
-        if dialog
-            @info "Tuning eps ⏳"
-        end
+        @info "Tuning eps ⏳"
         sampler.hyperparameters.eps = 0.5
         for i in 1:sett.tune_maxiter
             if tune_eps!(sampler, target, init; kwargs...)
                 break
             end
         end
-    #TODO: is this an elseif or an if?
-    elseif sampler.hyperparameters.L == 0.0
-        if dialog
-            @info "Tuning L ⏳"
-        end
-        tune_L!(sampler, targert)
+    end
+    if sampler.hyperparameters.L == 0.0
+        @info "Tuning L ⏳"
+        tune_L!(sampler, target, init; kwargs...)
     else
         if dialog
             println("Using given hyperparameters")
