@@ -133,11 +133,6 @@ function AbstractMCMC.bundle_samples(
     param_names = target.vsyms
     internal_names = [:E, :logp]
     names = [param_names; internal_names]
-    params = []
-    for sample in samples
-        param, internal = sample
-        push!(params, [param; internal])
-    end
 
     # Set up the info tuple.
     if save_state
@@ -152,11 +147,11 @@ function AbstractMCMC.bundle_samples(
     end
 
     # Conretize the array before giving it to MCMCChains.
-    params = MCMCChains.concretize(params)
+    samples = MCMCChains.concretize(samples)
 
     # Chain construction.
     chain = MCMCChains.Chains(
-        params,
+        samples,
         names,
         (internals = internal_names,);
         info=info,

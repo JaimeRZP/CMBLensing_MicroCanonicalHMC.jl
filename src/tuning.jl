@@ -77,28 +77,15 @@ function tune_eps(sampler::Sampler, target::Target, init; kwargs...)
     varE_wanted = sett.varE_wanted
     #x, u, g, time = init
 
-    samples = _init_samples()
+    samples = []
     for i in 1:sett.tune_samples
         init, sample = Step(sampler, target, init;
                             monitor_energy=true)
         push!(samples, sample)
     end
 
-    # remove large jumps in the energy
-    #E = samples.E .- mean(samples.E)
-    #E = remove_jumps(E)
-
-    ### compute quantities of interest ###
-
-    # typical size of the posterior
-    # Avg over samples
-    #x1 = mean(samples.Ω) #first moments
-    #x2 = mean([sample .^ 2 for sample in samples.Ω]) #second moments
-    # Avg over params
-    #sigma = sqrt.(mean(x2 - x1 .^ 2))
-
-    # energy fluctuations
-    E = [stat[1] for stat in samples.stats]
+    samples = mapreduce(permutedims, vcat, samples)
+    E = samples[:, end-1]
     varE = std(E)^2 / target.d #variance per dimension
     if dialog
         println("eps: ", eps, " --> VarE: ", varE)
@@ -146,10 +133,9 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
             @info "Tuning L ⏳"
         end
         sampler.hyperparameters.L = sqrt(target.d)
-        #=
-        steps = 10 .^ (LinRange(2, log10(2500), 6))
+        steps = 10 .^ (LinRange(2, log10(2500), sett.tune_maxiter))
         steps = Int.(round.(steps))
-        samples = _init_samples()
+        samples = []
         for s in steps
             for i in 1:s
                 init, sample = Step(sampler, target, init; monitor_energy=true)
@@ -169,7 +155,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
                            "ESS(correlations) = ", ESS))
             println("-------------")
         end
-        =#
+
     else
         if dialog
             println("Using given hyperparameters")
