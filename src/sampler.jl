@@ -42,7 +42,7 @@ struct Sampler <: AbstractMCMC.AbstractSampler
    hamiltonian_dynamics::Function
 end
 
-function Sampler(eps, L; kwargs...)
+function MCHMC(eps, L; kwargs...)
 
    sett = Settings(;kwargs...)
    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
