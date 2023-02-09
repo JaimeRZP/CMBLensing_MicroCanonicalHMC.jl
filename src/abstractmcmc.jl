@@ -107,7 +107,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     duration = stop - start
     stats = AbstractMCMC.SamplingStats(start, stop, duration)
 
-    return foo( #AbstractMCMC.bundle_samples(
+    return AbstractMCMC.bundle_samples(
     samples,
     target,
     sampler,
@@ -119,7 +119,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     kwargs...)
 end
 
-function foo( #AbstractMCMC.bundle_samples(
+function AbstractMCMC.bundle_samples(
     samples::Vector,
     target::AbstractMCMC.AbstractModel,
     sampler::AbstractMCMC.AbstractSampler,
