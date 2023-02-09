@@ -4,18 +4,17 @@ export Settings, Hyperparameters, Sampler, Sample
 export Leapfrog, Minimal_norm
 export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
-using Interpolations, LinearAlgebra, Statistics, DynamicPPL, DataFrames
-using Distributions, Random, ForwardDiff, Zygote, AbstractMCMC
-using LogDensityProblems, LogDensityProblemsAD
-using CMBLensing
+using Interpolations, LinearAlgebra, Statistics, FFTW, Distributions, Random, DataFrames
+using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
+using AbstractMCMC, MCMCChains
 
-abstract type Target end
+abstract type Target <: AbstractMCMC.AbstractModel end
 
 include("sampler.jl")
 include("targets.jl")
 include("tuning.jl")
 include("integrators.jl")
-include("CMBLensing_utils.jl")
+include("abstractmcmc.jl")
 
 
 end
