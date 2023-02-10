@@ -135,7 +135,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     kwargs...)
 end
 
-#=
+
 function AbstractMCMC.mcmcsample(
     target::AbstractMCMC.AbstractModel,
     sampler::AbstractMCMC.AbstractSampler,
@@ -240,7 +240,6 @@ function AbstractMCMC.mcmcsample(
     # Concatenate the chains together.
     return chainsstack(tighten_eltype(chains))
 end
-=#
 
 function AbstractMCMC.bundle_samples(
     samples::Vector,
