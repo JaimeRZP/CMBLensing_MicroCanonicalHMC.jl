@@ -42,7 +42,7 @@ struct Sampler <: AbstractMCMC.AbstractSampler
    hamiltonian_dynamics::Function
 end
 
-function mchmc(eps, L; kwargs...)
+function MCHMC(eps, L; kwargs...)
 
    sett = Settings(;kwargs...)
    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
@@ -65,8 +65,8 @@ function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
     return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
 end
 
-function mchmc(; kwargs...)
-    return mchmc(0.0, 0.0; kwargs...)
+function MCHMC(; kwargs...)
+    return MCHMC(0.0, 0.0; kwargs...)
 end
 
 function Random_unit_vector(key, d; normalize = true)
