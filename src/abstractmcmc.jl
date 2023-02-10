@@ -175,7 +175,7 @@ function AbstractMCMC.mcmcsample(
     # Set up a chains vector.
     chains = Vector{Any}(undef, nchains)
 
-    @ifwithprogresslogger progress name = progressname begin
+    @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
         # Create a channel for progress logging.
         if progress
             channel = Channel{Bool}(length(interval))
@@ -194,7 +194,7 @@ function AbstractMCMC.mcmcsample(
                     while take!(channel)
                         progresschains += 1
                         if progresschains >= nextprogresschains
-                            ProgressLogging.@logprogress progresschains / nchains
+                            AbstractMCMC.ProgressLogging.@logprogress progresschains / nchains
                             nextprogresschains = progresschains + threshold
                         end
                     end
