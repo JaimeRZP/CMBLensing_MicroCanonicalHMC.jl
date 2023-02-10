@@ -131,22 +131,10 @@ function Dynamics(sampler::Sampler, target::Target, state)
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
 
-    # why not this??
+    # Not needed
     # time += eps
 
     return xx, uuu, gg, kinetic_change, time
-end
-
-function _set_hyperparameters(init, sampler::Sampler, target::Target; kwargs...)
-    eps = sampler.hyperparameters.eps
-    L = sampler.hyperparameters.L
-    if [eps, L] == [0.0, 0.0]
-        @info "Self-tuning hyperparameters ⏳"
-        eps, L = tune_hyperparameters(init, sampler, target; kwargs...)
-    end
-    nu = sqrt((exp(2 * eps / L) - 1.0) / target.d)
-
-    sampler.hyperparameters.nu = nu
 end
 
 function Energy(target::Target, x, xx, E, kinetic_change)
@@ -167,10 +155,6 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     sample = [target.inv_transform(x); 0.0; -target.nlogp(x)]
     state = (x, u, g, 0.0, 0.0)
     return state, sample
-end
-
-function Energy(target::Target, x, u)
-    return -target.nlogp(x) + dot(u, target.grad_nlogp(x))
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
