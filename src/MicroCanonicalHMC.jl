@@ -1,10 +1,10 @@
-module MCHMC
+module MicroCanonicalHMC
 
 export Settings, Hyperparameters, MCHMC, Sample
 export Leapfrog, Minimal_norm
 export TuringTarget, StandardGaussianTarget, CustomTarget, CMBLensingTarget
 
-using Interpolations, LinearAlgebra, Statistics, FFTW, Distributions, Random, DataFrames
+using Interpolations, LinearAlgebra, Statistics, Distributions, Random, DataFrames
 using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
 using AbstractMCMC, MCMCChains
 
