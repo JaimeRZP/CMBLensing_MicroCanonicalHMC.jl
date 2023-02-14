@@ -1,8 +1,12 @@
+chainsstack(c::AbstractVector{MCMCChains.Chains}) = reduce(chainscat, c)
+
 function AbstractMCMC.sample(model::DynamicPPL.Model,
                              sampler::AbstractMCMC.AbstractSampler,
                              ::MCMCThreads,
                              N::Integer,
                              nchains::Integer;
+                             progress=PROGRESS[],
+                             progressname="Sampling",
                              resume_from=nothing,
                              kwargs...)
 
@@ -22,13 +26,28 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
     end
 
     # Start parallelization
-    nchains = Threads.nthreads()
+    if nchains < Threads.nthreads()
+        @info string("number of chains: ",
+                     nchains,
+                     " smaller than number of threads: ",
+                     Threads.nthreads(),  ".",
+                     " Increase the number of chains to make full use of your threads.")
+    end
+    if nchains > Threads.nthreads()
+        @info string("number of chains: ",
+                     nchains,
+                     " requesteed larger than number of threads: ",
+                     Threads.nthreads(),  ".",
+                     " Setting number of chains to number of threads.")
+        nchains = Threads.nthreads()
+    end
     interval = 1:nchains
+    chains = Vector{MCMCChains.Chains}(undef, nchains)
     targets = [deepcopy(target) for _ in interval]
     samplers = [deepcopy(sampler) for _ in interval]
     # when restarting from an old run
     # these we need to get the inits from that run
-    inits = [target.prior_draw(0.0) for _ in interval]
+    inits = [Get_initial_conditions(sampler, target) for _ in interval]
 
     @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
         # Create a channel for progress logging.
@@ -36,140 +55,23 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
             channel = Channel{Bool}(length(interval))
         end
 
-        Distributed.@sync begin
-            if progress
-                # Update the progress bar.
-                Distributed.@async begin
-                    # Determine threshold values for progress logging
-                    # (one update per 0.5% of progress)
-                    threshold = nchains ÷ 200
-                    nextprogresschains = threshold
+        Threads.@threads for i in interval
+            _sampler = samplers[i]
+            _target = targets[i]
+            _init = inits[i]
+            chains[i] = AbstractMCMC.mcmcsample(
+                _target,
+                _sampler,
+                _init,
+                N;
+                progress=PROGRESS[],
+                progressname=string("chain ", i),
+                kwargs...)
 
-                    progresschains = 0
-                    while take!(channel)
-                        progresschains += 1
-                        if progresschains >= nextprogresschains
-                            AbstractMCMC.ProgressLogging.@logprogress progresschains / nchains
-                            nextprogresschains = progresschains + threshold
-                        end
-                    end
-                end
-            end
-
-            Distributed.@async begin
-                try
-                    Distributed.@sync for (_init, _target, _sampler) in
-                                          zip(inits, targets, samplers)
-
-                        Threads.@spawn for i in interval
-                            # Sample a chain and save it to the vector.
-                            chains[chainidx] = AbstractMCMC.mcmcsample(
-                                _target,
-                                _sampler,
-                                _init,
-                                N;
-                                progress=false,
-                                kwargs...)
-
-                            # Update the progress bar.
-                            progress && put!(channel, true)
-                        end
-                    end
-                finally
-                    # Stop updating the progress bar.
-                    progress && put!(channel, false)
-                end
-            end
+            # Update the progress bar.
+            progress && put!(channel, true)
         end
     end
 
-    return chains
+    return chainsstack(chains)
 end
-
-#=
-function AbstractMCMC.mcmcsample(
-    target::AbstractMCMC.AbstractModel,
-    sampler::AbstractMCMC.AbstractSampler,
-    ::MCMCThreads,
-    N::Integer,
-    nchains::Integer;
-    save_state=true,
-    burn_in = 0,
-    progress=PROGRESS[],
-    progressname="Sampling",
-    callback=nothing,
-    thinning=1,
-    kwargs...)
-
-    # Ensure that initial parameters are `nothing` or indexable
-    _init_params = _first_or_nothing(init_params, nchains)
-
-    # Set up a chains vector.
-    chains = Vector{Any}(undef, nchains)
-
-    @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
-        # Create a channel for progress logging.
-        if progress
-            channel = Channel{Bool}(length(interval))
-        end
-
-        Distributed.@sync begin
-            if progress
-                # Update the progress bar.
-                Distributed.@async begin
-                    # Determine threshold values for progress logging
-                    # (one update per 0.5% of progress)
-                    threshold = nchains ÷ 200
-                    nextprogresschains = threshold
-
-                    progresschains = 0
-                    while take!(channel)
-                        progresschains += 1
-                        if progresschains >= nextprogresschains
-                            AbstractMCMC.ProgressLogging.@logprogress progresschains / nchains
-                            nextprogresschains = progresschains + threshold
-                        end
-                    end
-                end
-            end
-
-            Distributed.@async begin
-                try
-                    Distributed.@sync for (i, _target, _sampler) in
-                                          zip(1:nchunks, rngs, models, samplers)
-                        chainidxs = if i == nchunks
-                            ((i - 1) * chunksize + 1):nchains
-                        else
-                            ((i - 1) * chunksize + 1):(i * chunksize)
-                        end
-                        Threads.@spawn for chainidx in chainidxs
-                            # Sample a chain and save it to the vector.
-                            chains[chainidx] = AbstractMCMC.mcmcsample(
-                                _target,
-                                _sampler,
-                                N;
-                                progress=false,
-                                init_params=if _init_params === nothing
-                                    nothing
-                                else
-                                    _init_params[chainidx]
-                                end,
-                                kwargs...,
-                            )
-
-                            # Update the progress bar.
-                            progress && put!(channel, true)
-                        end
-                    end
-                finally
-                    # Stop updating the progress bar.
-                    progress && put!(channel, false)
-                end
-            end
-        end
-    end
-
-    # Concatenate the chains together.
-    return chainsstack(tighten_eltype(chains))
-end
-=#
