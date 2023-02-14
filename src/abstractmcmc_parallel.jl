@@ -5,13 +5,20 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
                              nchains::Integer;
                              resume_from=nothing,
                              kwargs...)
-    # Get target
+
     if resume_from === nothing
         target = TuringTarget(model)
+        init = Get_initial_conditions(sampler, target; kwargs...)
+        state, sample = init
+        # We will have to parallelize this later
         tune_hyperparameters(sampler, target, state; kwargs...)
     else
-        target =  chain.info[:target]
-        chain = chain.info[:sampler]
+        @info "Starting from previous run"
+        target = resume_from.info[:target]
+        sampler = resume_from.info[:sampler]
+        # In the parallel case we need a different
+        # init for each worker
+        #init = resume_from.info[:init]
     end
 
     # Start parallelization
@@ -19,6 +26,9 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
     interval = 1:nchains
     targets = [deepcopy(target) for _ in interval]
     samplers = [deepcopy(sampler) for _ in interval]
+    # when restarting from an old run
+    # these we need to get the inits from that run
+    inits = [target.prior_draw(0.0) for _ in interval]
 
     @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
         # Create a channel for progress logging.
@@ -48,14 +58,15 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
 
             Distributed.@async begin
                 try
-                    Distributed.@sync for (_target, _sampler) in
-                                          zip(targets, samplers)
+                    Distributed.@sync for (_init, _target, _sampler) in
+                                          zip(inits, targets, samplers)
 
                         Threads.@spawn for i in interval
                             # Sample a chain and save it to the vector.
                             chains[chainidx] = AbstractMCMC.mcmcsample(
                                 _target,
                                 _sampler,
+                                _init
                                 N;
                                 progress=false,
                                 kwargs...)
