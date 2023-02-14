@@ -1,8 +1,6 @@
 
 const PROGRESS = Ref(true)
 
-chainsstack(c::AbstractVector{MCMCChains.Chains}) = reduce(chainscat, c)
-
 function AbstractMCMC.step(sampler::Sampler, target::Target, state; kwargs...)
     return Step(sampler::Sampler, target::Target, state; kwargs...)
 end
