@@ -2,7 +2,7 @@
 using Documenter, MicroCanonicalHMC
 
 makedocs(sitename = "MicroCanonicalHMC.jl",
-         modules = [GaussianProcess],
+         modules = [MicroCanonicalHMC],
          pages = ["Home" => "index.md",
                   "API" => "api.md"])
 deploydocs(
