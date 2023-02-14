@@ -66,7 +66,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
                             chains[chainidx] = AbstractMCMC.mcmcsample(
                                 _target,
                                 _sampler,
-                                _init
+                                _init,
                                 N;
                                 progress=false,
                                 kwargs...)
