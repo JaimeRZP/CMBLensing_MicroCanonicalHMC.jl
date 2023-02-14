@@ -148,7 +148,11 @@ function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     ### initial conditions ###
-    x = get(kwargs, :initial_x, target.prior_draw(sett.key))
+    if :initial_x ∈ keys(kwargs)
+        x = target.transform(kwargs[:initial_x])
+    else
+        x = target.prior_draw(sett.key)
+    end
     g = target.grad_nlogp(x) .* target.d ./ (target.d - 1)
     u = Random_unit_vector(sampler, target) #random initial direction
 

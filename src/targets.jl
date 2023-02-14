@@ -46,6 +46,9 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function prior_draw(key)
+        ctxt = model.context
+        vi = DynamicPPL.VarInfo(model, ctxt)
+        vi_t = Turing.link!!(vi, model)
         return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
