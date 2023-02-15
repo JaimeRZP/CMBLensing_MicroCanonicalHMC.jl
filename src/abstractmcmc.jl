@@ -33,7 +33,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
                                  save_state=true,
                                  burn_in = 0,
                                  progress=PROGRESS[],
-                                 progressname="Sampling",
+                                 progressname="Chain 1",
                                  callback=nothing,
                                  thinning=1,
                                  kwargs...)
