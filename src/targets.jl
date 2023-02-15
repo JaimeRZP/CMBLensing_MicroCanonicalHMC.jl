@@ -5,6 +5,7 @@ mutable struct TuringTarget <: Target
     dists
     nlogp::Function
     grad_nlogp::Function
+    nlogp_grad_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -45,6 +46,10 @@ TuringTarget(model; kwargs...) = begin
         return ForwardDiff.gradient(nlogp, xt)
     end
 
+    function nlogp_grad_nlogp(xt)
+    l, g = LogDensityProblems.logdensity_and_gradient(ℓ, xt)
+    return -l , -g
+
     function prior_draw(key)
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
@@ -59,6 +64,7 @@ TuringTarget(model; kwargs...) = begin
                dists,
                nlogp,
                grad_nlogp,
+               nlogp_grad_nlogp,
                transform,
                inv_transform,
                prior_draw)

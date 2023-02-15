@@ -144,7 +144,7 @@ function Energy(target::Target, x, xx, E, kinetic_change)
     return -nllogp, EE
 end
 
-function Get_initial_conditions(sampler::Sampler, target::Target; kwargs...)
+function Init(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     ### initial conditions ###
@@ -185,7 +185,7 @@ function Sample(sampler::Sampler, target::Target,
             samples (shape = (num_steps, self.Target.d))
     """
 
-    state, sample = Get_initial_conditions(sampler, target; kwargs...)
+    state, sample = Init(sampler, target; kwargs...)
     tune_hyperparameters(sampler, target, state; kwargs...)
 
     for i in 1:sampler.settings.burn_in

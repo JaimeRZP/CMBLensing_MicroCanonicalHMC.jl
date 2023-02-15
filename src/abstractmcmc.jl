@@ -13,7 +13,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
 
     if resume_from === nothing
         target = TuringTarget(model)
-        init = Get_initial_conditions(sampler, target; kwargs...)
+        init = Init(sampler, target; kwargs...)
         state, sample = init
         tune_hyperparameters(sampler, target, state; kwargs...)
     else
