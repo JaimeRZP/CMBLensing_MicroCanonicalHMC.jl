@@ -13,6 +13,7 @@ abstract type Target <: AbstractMCMC.AbstractModel end
 include("sampler.jl")
 include("targets.jl")
 include("tuning.jl")
+include("tuning_parallel.jl")
 include("integrators.jl")
 include("abstractmcmc.jl")
 include("abstractmcmc_parallel.jl")

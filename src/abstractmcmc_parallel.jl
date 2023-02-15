@@ -12,7 +12,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
 
     if resume_from === nothing
         target = TuringTarget(model)
-        init = Get_initial_conditions(sampler, target; kwargs...)
+        init = Init(sampler, target; kwargs...)
         state, sample = init
         # We will have to parallelize this later
         tune_hyperparameters(sampler, target, state; kwargs...)
@@ -37,7 +37,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
         chains = Vector{MCMCChains.Chains}(undef, nchains)
         targets = [deepcopy(target) for _ in interval]
         samplers = [deepcopy(sampler) for _ in interval]
-        inits = [Get_initial_conditions(sampler, target) for _ in interval]
+        inits = [Init(sampler, target) for _ in interval]
 
     else
         @info "Starting from previous run"
