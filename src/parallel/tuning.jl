@@ -59,17 +59,8 @@ function Init_parallel(sampler::Sampler, target::Target; kwargs...)
         get_x0 = key -> target.prior_draw(key)
     end
 
-    xs = Matrix{Float64}(undef, sett.nchains, target.d)
-    ls = Matrix{Float64}(undef, sett.nchains, target.d)
-    gs = Matrix{Float64}(undef, sett.nchains, target.d)
-    Threads.@threads :static for i in 1:sett.nchains
-        x = get_x0(sett.key)
-        l, g = target.nlogp_grad_nlogp(x)
-
-        xs[i, :] .= x
-        ls[i, :] .= l
-        gs[i, :] .= g
-    end
+    xs = target.prior_draw(sett.key)
+    ls, gs = target.nlogp_grad_nlogp(xs)
     virials = mean(xs .* gs, dims=1)
     loss = mean((1 .- virials).^2)
     sng = -2.0 .* (virials .< 1.0) .+ 1.0
