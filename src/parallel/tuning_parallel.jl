@@ -29,49 +29,85 @@ function Virial_loss(xs, gs)
     return sqrt.(mean((virials .- 1.0).^2))
 end
 
-function Init_burnin(sampler::Sampler, target::Target; kwargs...)
+function Init_burnin(sampler::Sampler, target::Target, sampler_init)
+    sett = sampler.settings
+    eps = sampler.hyperameter.eps
+    L = sampler.hyperameter.L
+    varE_wanted = sampler.settings.VarE_wanted
+    loss, x, u, l, g = sampler_init
+    steps = 0
+    fail_count = 0
+    never_rejected = true
+    sigma = ones(target.d)
+
+    init = (steps, loss, fail_count, never_rejected,
+            x, u, l, g, L, eps, sigma, VarE_wanted)
+    return init
+end
+
+function Init_parallel(sampler::Sampler, target::Target; kwargs...)
+
     sett = sampler.settings
     kwargs = Dict(kwargs)
     ### initial conditions ###
+
     if :initial_x ∈ keys(kwargs)
         x0 = target.transform(kwargs[:initial_x])
-        get_x0::Function = _ -> x0
+        get_x0 = key -> x0
+        nothing
     else
-        get_x0::Function = _ -> target.prior_draw(sett.key)
+        get_x0 = key -> target.prior_draw(key)
     end
 
-    xs = Vector{Any, nchains}
-    ls = Vector{Any, nchains}
-    gs = Vector{Any, nchains}
-    virials = Vector{Any, nchains}
-    @Threads.Threads() :static for i in nchains
-        x = get_x0()
+    xs = Matrix{Float64}(undef, sett.nchains, target.d)
+    ls = Matrix{Float64}(undef, sett.nchains, target.d)
+    gs = Matrix{Float64}(undef, sett.nchains, target.d)
+    Threads.@threads :static for i in 1:sett.nchains
+        x = get_x0(sett.key)
         l, g = target.nlogp_grad_nlogp(x)
-        virial = x .* g
 
-        xs[i] = x
-        ls[i] = l
-        gs[i] = g
-        virials[i] = virial
+        xs[i, :] .= x
+        ls[i, :] .= l
+        gs[i, :] .= g
     end
-
-    loss = sqrt.(mean((virials .- 1.0).^2))
+    virials = mean(xs .* gs, dims=1)
+    loss = mean((1 .- virials).^2)
     sng = -2.0 .* (virials .< 1.0) .+ 1.0
-    us = -.gs ./ sqrt.(sum((gs.^2))
-
+    us = -gs ./ sqrt.(sum(gs.^2))
+    us .*= sng
     return loss, xs, us, ls, gs
 end
 
-function Step_Burnin(sampler::Sampler, target::Target, state; kwargs...)
-    return nothing
+function Step_burnin(sampler::Sampler, target::Target, state; kwargs...)
+    steps, loss, fail_count, never_rejected, x, u, l, g, key, L, eps, sigma, varE = state
+    sigma = std(x, dims=1)  # diagonal conditioner
+
+    xx, uu, ll, gg, kinetic_change, key = self.dynamics(x, u, g, key, L, eps, sigma)  # update particles by one step
+
+    loss_new = self.virial_loss(xx, gg)
+    varE_new = jnp.average(jnp.square(kinetic_change + ll - l)) / self.Target.d
+
+    #will we accept the step?
+    accept, loss, x, u, l, g, varE = accept_reject_step(loss, x, u, l, g, varE, loss_new, xx, uu, ll, gg, varE_new)
+    #Ls.append(loss)
+    #X.append(x)
+    never_rejected *= accept #True if no step has been rejected so far
+    fail_count = (fail_count + 1) * (1-accept) #how many rejected steps did we have in a row
+
+                    #reduce eps if rejected    #increase eps if never rejected        #keep the same
+    eps = eps * ((1-accept) * self.reduce + accept * (never_rejected * self.increase + (1-never_rejected) * 1.0))
+    #epss.append(eps)
+
+    return steps + 1, loss, fail_count, never_rejected, x, u, l, g, key, L, eps, sigma, varE
 end
 
 function Burnin_parallel(sampler::Sampler, target::Target; kwargs...)
+    init = Init_burnin(sampler, target)
     return nothing
 end
 
 function tune_L_parallel!(sampler::Sampler, target::Target, init; kwargs...)
-    @Info "Not Implemented using L = sqrt(target.d)"
+    @info "Not Implemented using L = sqrt(target.d)"
     sampler.hyperparameters.L = sqrt(target.d)
 end
 
