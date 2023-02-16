@@ -139,7 +139,7 @@ function Step(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...
 end
 
 
-function Sample(sampler::EnsembleSampler, target::ParallelTarget,
+function Sample(sampler::EnsembleSampler, target::Target,
                 num_steps::Int, burnin::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
@@ -148,11 +148,12 @@ function Sample(sampler::EnsembleSampler, target::ParallelTarget,
         Returns:
             samples (shape = (num_steps, self.Target.d))
     """
+    nchains = sampler.settings.nchains
+    target = ParallelTarget(target, nchains)
 
     state, sample = Init(sampler, target; kwargs...)
     tune_hyperparameters(sampler, target, state; kwargs...)
 
-    nchains = sampler.settings.nchains
     d = target.target.d
     chains = zeros(num_steps, nchains, d+2)
     X, E, L = sample
