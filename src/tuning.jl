@@ -83,8 +83,11 @@ function eval_nu(eps, L, d)
     return nu
 end
 
-function tune_nu!(spl::Sampler, trg::Target)
-    spl.hyperparameters.nu = eval_nu(spl.hyperparameters.eps, spl.hyperparameters.L, trg.d)
+function tune_nu!(sampler::Sampler, target::Target)
+    eps = sampler.hyperparameters.eps
+    L = sampler.hyperparameters.L
+    d = target.d
+    sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
 function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
@@ -107,9 +110,9 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
         @info "Tuning L ⏳"
         tune_L!(sampler, target, init; kwargs...)
     else
-        if dialog
-            println("Using given hyperparameters")
-        end
+        @info "Using given hyperparameters"
+        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
+        @info string("Found L: ", sampler.hyperparameters.L, " ✅")
     end
     tune_nu!(sampler, target)
 end
