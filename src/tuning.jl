@@ -31,8 +31,8 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
             println(string("samples: ", length(samples), "--> ESS: ", ESS))
         end
         if length(samples) > 10.0 / ESS
-            @info string("Found L: ", sampler.hyperparameters.L, " ✅")
             sampler.hyperparameters.L = 0.4 * eps / ESS # = 0.4 * correlation length
+            @info string("Found L: ", sampler.hyperparameters.L, " ✅")
             break
         end
     end
