@@ -25,33 +25,33 @@ TuringTarget(model; kwargs...) = begin
     d = length(vsyms)
 
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
-    ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
+    ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
+    ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
 
-    function transform(x::Vector{Float64})
+
+    function transform(x)
         xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
         return xt
     end
 
-    function inv_transform(xt::Vector{Float64})
+    function inv_transform(xt)
         x = [Bijectors.invlink(dist, par) for (dist, par) in zip(dists, xt)]
         return x
     end
 
-    function nlogp(xt::Vector{Float64})
-        #x = inv_transform(xt)
-        return -1.0 .* ℓπ(xt)
+    function nlogp(xt)
+        return -ℓπ(xt)
     end
 
-    function grad_nlogp(xt::Vector{Float64})
+    function grad_nlogp(xt)
         return ForwardDiff.gradient(nlogp, xt)
     end
 
-    function nlogp_grad_nlogp(xt::Vector{Float64})
-        l, g = LogDensityProblems.logdensity_and_gradient(ℓ, xt)
-        return -l , -g
+    function nlogp_grad_nlogp(xt)
+        return -1 .* ∂lπ∂θ(xt)
     end
 
-    function prior_draw(key::Number)
+    function prior_draw(key)
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
         vi_t = Turing.link!!(vi, model)
@@ -63,7 +63,9 @@ TuringTarget(model; kwargs...) = begin
                d,
                vsyms,
                dists,
+               nlogp,
                grad_nlogp,
+               nlogp_grad_nlogp,
                transform,
                inv_transform,
                prior_draw)
@@ -71,6 +73,8 @@ end
 
 mutable struct ParallelTarget <: Target
     target::Target
+    nlogp::Function
+    grad_nlogp::Function
     nlogp_grad_nlogp::Function
     transform::Function
     inv_transform::Function
@@ -78,43 +82,61 @@ mutable struct ParallelTarget <: Target
 end
 
 ParallelTarget(target::Target, nchains) = begin
-    sett = target.settings
-
-    function transform(xs::Matrix{Float64})
-        xs_t = Matrix{FLoat64}(undef, nchains, d)
+    d = target.d
+    function transform(xs)
+        xs_t = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
-            xs_t[i, :] = target.transform(xs[i, :])
+            xs_t[i, :] .= target.transform(xs[i, :])
         end
         return xs_t
     end
 
-    function inv_transform(xs_t::Matrix{Float64})
-        xs = Matrix{FLoat64}(undef, nchains, d)
+    function inv_transform(xs_t)
+        xs = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
-            xs[i, :] = target.inv_transform(xs_t[i, :])
+            xs[i, :] .= target.inv_transform(xs_t[i, :])
         end
         return xs
     end
 
-    function nlogp_grad_nlogp(xs_t::Matrix{Float64})
-        ls = Matrix{Float64}(undef, nchains, d)
-        gs = Matrix{Float64}(undef, nchains, d)
+    function nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
         @inbounds Threads.@threads :static for i in 1:nchains
-            ls[i, :], gs[i, :] .= target.nlopg_grad_nlogp(xs_t[i, :])
+            ls[i] = target.nlogp(xs_t[i, :])
+        end
+        return ls
+    end
+
+    function grad_nlogp(xs_t)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            gs[i, :] .= target.grad_nlogp(xs_t[i, :])
+        end
+        return gs
+    end
+
+    function nlogp_grad_nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            ls[i], = target.nlogp(xs_t[i, :])
+            gs[i, :] = target.grad_nlogp(xs_t[i, :])
         end
         return ls , gs
     end
 
-    function prior_draw(key::Number)
-        xs_t = Matrix{FLoat64}(undef, nchains, d)
+    function prior_draw(key)
+        xs_t = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
-            xs_t[i, :] = target.prior_draw(sett.key)
+            xs_t[i, :] .= target.prior_draw(key)
         end
         return xs_t
     end
 
     ParallelTarget(
         target,
+        nlogp,
+        grad_nlogp,
         nlogp_grad_nlogp,
         transform,
         inv_transform,
