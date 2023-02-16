@@ -15,6 +15,9 @@ include("targets.jl")
 include("tuning.jl")
 include("integrators.jl")
 include("abstractmcmc.jl")
-include("parallel/MicroCannonicalHMC_parallel.jl")
+
+include("parallel/integrators.jl")
+include("parallel/sampler.jl")
+include("parallel/tuning.jl")
 
 end

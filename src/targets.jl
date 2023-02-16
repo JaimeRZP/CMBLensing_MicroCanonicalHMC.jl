@@ -79,9 +79,10 @@ end
 
 ParallelTarget(target::Target, nchains) = begin
     sett = target.settings
+
     function transform(xs::Matrix{Float64})
         xs_t = Matrix{FLoat64}(undef, nchains, d)
-        @Threads.threads() :static for i in 1:nchains
+        @inbounds Threads.@threads :static for i in 1:nchains
             xs_t[i, :] = target.transform(xs[i, :])
         end
         return xs_t
@@ -89,7 +90,7 @@ ParallelTarget(target::Target, nchains) = begin
 
     function inv_transform(xs_t::Matrix{Float64})
         xs = Matrix{FLoat64}(undef, nchains, d)
-        @Threads.threads() :static for i in 1:nchains
+        @inbounds Threads.@threads :static for i in 1:nchains
             xs[i, :] = target.inv_transform(xs_t[i, :])
         end
         return xs
@@ -98,7 +99,7 @@ ParallelTarget(target::Target, nchains) = begin
     function nlogp_grad_nlogp(xs_t::Matrix{Float64})
         ls = Matrix{Float64}(undef, nchains, d)
         gs = Matrix{Float64}(undef, nchains, d)
-        @Threads.threads() :static for i in 1:nchains
+        @inbounds Threads.@threads :static for i in 1:nchains
             ls[i, :], gs[i, :] .= target.nlopg_grad_nlogp(xs_t[i, :])
         end
         return ls , gs
@@ -106,14 +107,14 @@ ParallelTarget(target::Target, nchains) = begin
 
     function prior_draw(key::Number)
         xs_t = Matrix{FLoat64}(undef, nchains, d)
-        @Threads.threads() :static for i in 1:nchains
+        @inbounds Threads.@threads :static for i in 1:nchains
             xs_t[i, :] = target.prior_draw(sett.key)
         end
         return xs_t
     end
 
     ParallelTarget(
-        target
+        target,
         nlogp_grad_nlogp,
         transform,
         inv_transform,
