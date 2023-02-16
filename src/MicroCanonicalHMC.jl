@@ -16,8 +16,8 @@ include("tuning.jl")
 include("integrators.jl")
 include("abstractmcmc.jl")
 
-include("parallel/integrators.jl")
-include("parallel/sampler.jl")
-include("parallel/tuning.jl")
+include("ensemble/sampler.jl")
+include("ensemble/integrators.jl")
+include("ensemble/tuning.jl")
 
 end

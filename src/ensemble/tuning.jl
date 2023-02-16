@@ -1,3 +1,4 @@
+#=
 function accept_reject_step(old_state, new_state)
     loss, x, u, l, g, varE = old_state
     loss_new, xx, uu, ll, gg, varE_new = new_state
@@ -45,7 +46,7 @@ function Init_burnin(sampler::Sampler, target::Target, sampler_init)
     return init
 end
 
-function Init_parallel(sampler::Sampler, target::Target; kwargs...)
+function Init_parallel(sampler::EnsembleSampler, target::Target; kwargs...)
 
     sett = sampler.settings
     kwargs = Dict(kwargs)
@@ -97,61 +98,27 @@ function Burnin_parallel(sampler::Sampler, target::Target; kwargs...)
     return nothing
 end
 
-function tune_L_parallel!(sampler::Sampler, target::Target, init; kwargs...)
+=#
+
+function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
     @info "Not Implemented using L = sqrt(target.d)"
     sampler.hyperparameters.L = sqrt(target.d)
 end
 
-function tune_eps_parallel!(sampler::Sampler, target::Target, init; kwargs...)
-    dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings
+function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
+    @info "Not Implemented using eps = sqrt(target.d)"
+    sampler.hyperparameters.eps = sqrt(target.d)
+    return true
+end
+
+function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
     eps = sampler.hyperparameters.eps
-    L = sqrt(target.d) #sampler.hyperparameters.L
-    varE_wanted = sett.varE_wanted
-    #x, u, g, time = init
-
-    samples = []
-    for i in 1:sett.tune_samples
-        init, sample = Step(sampler, target, init;
-                            monitor_energy=true)
-        push!(samples, sample)
-    end
-
-    samples = mapreduce(permutedims, vcat, samples)
-    E = samples[:, end-1]
-    varE = std(E)^2 / target.d #variance per dimension
-    if dialog
-        println("eps: ", eps, " --> VarE: ", varE)
-    end
-    no_divergences = isfinite(varE)
-
-    ### update the hyperparameters ###
-    if no_divergences
-        success = varE < varE_wanted #we are done
-        if !success
-            #eps_new = eps*(varE_wanted/varE)^0.25 #assume var[E] ~ eps^4
-            sampler.hyperparameters.eps = 0.5 * eps
-        else
-            @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
-        end
-    else
-        success = false
-        sampler.hyperparameters.eps = 0.5 * eps
-    end
-
-    return success
+    L = sampler.hyperparameters.L
+    d = target.target.d
+    sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function eval_nu(eps, L, d)
-    nu = sqrt((exp(2 * eps / L) - 1.0) / d)
-    return nu
-end
-
-function tune_nu!(spl::Sampler, trg::Target)
-    spl.hyperparameters.nu = eval_nu(spl.hyperparameters.eps, spl.hyperparameters.L, trg.d)
-end
-
-function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
+function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
     sett = sampler.settings
 
     ### debugging tool ###
@@ -171,9 +138,9 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
         @info "Tuning L ⏳"
         tune_L!(sampler, target, init; kwargs...)
     else
-        if dialog
-            println("Using given hyperparameters")
-        end
+        @info "Using given hyperparameters"
+        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
+        @info string("Found L: ", sampler.hyperparameters.L, " ✅")
     end
     tune_nu!(sampler, target)
 end
