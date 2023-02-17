@@ -75,33 +75,13 @@ end
 
 function Dynamics(sampler::EnsembleSampler, target::ParallelTarget, state)
     """One step of the Langevin-like dynamics."""
-
-    x, u, l, g, time = state
-
+    x, u, l, g, dE = state
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
-
-    # Not needed
-    # time += eps
-
-    return xx, uuu, ll, gg, kinetic_change, time
-end
-
-function Energy(target::Target,
-                x::AbstractMatrix, xx::AbstractMatrix,
-                E::AbstractVector, kinetic_change::AbstractVector)
-    nlogp = target.nlogp(x)
-    nllogp = target.nlogp(xx)
-    EE = Energy(nlogp, nllogp, E, kinetic_change)
-    return -nllogp, EE
-end
-
-function Energy(l::AbstractVector, ll::AbstractVector,
-                E::AbstractVector, kinetic_change::AbstractVector)
-    return E .+ kinetic_change .+ ll .- l
+    dEE = kinetic_change .+ ll .- l
+    return xx, uuu, ll, gg, dEE
 end
 
 function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
@@ -118,24 +98,20 @@ function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     g .*= d/(d-1)
     u = Random_unit_vector(sampler, target) #random initial direction
 
-    E = zeros(sett.nchains)
-    sample = (target.inv_transform(x), E, -l)
-    state = (x, u, l, g, E, 0.0)
+    dE = zeros(sett.nchains)
+    sample = (target.inv_transform(x), dE, -l)
+    state = (x, u, l, g, dE)
     return state, sample
 end
 
 function Step(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
     sett = sampler.settings
-    x, u, l, g, E, time = state
+    x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, kinetic_change, time = step
-    if get(kwargs, :monitor_energy, false)
-        EE = Energy(l ,ll, E, kinetic_change)
-    else
-        EE = zeros(sett.nchains)
-    end
-    return step, (target.inv_transform(xx), EE, -ll)
+    xx, uu, ll, gg, dEE = step
+
+    return step, (target.inv_transform(xx), dE .+ dEE, -ll)
 end
 
 

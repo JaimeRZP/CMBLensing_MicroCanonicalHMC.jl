@@ -1,8 +1,9 @@
-mutable struct Hyperparameters{T}
-    eps ::T
-    L::T
-    nu::T
-    lambda_c::T
+mutable struct Hyperparameters
+    eps::Float64
+    L::Float64
+    nu::Float64
+    lambda_c::Float64
+    sigma::AbstractVector
 end
 
 Hyperparameters(;kwargs...) = begin
@@ -10,7 +11,8 @@ Hyperparameters(;kwargs...) = begin
    L = get(kwargs, :L, 0.0)
    nu = get(kwargs, :nu, 0.0)
    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
-   Hyperparameters(eps, L, nu, lambda_c)
+   sigma = get(kwargs, :sigma, [1.0])
+   Hyperparameters(eps, L, nu, lambda_c, sigma)
 end
 
 mutable struct Settings
@@ -116,33 +118,23 @@ end
 
 function Dynamics(sampler::Sampler, target::Target, state)
     """One step of the Langevin-like dynamics."""
-
-    x, u, l, g, time = state
-
+    x, u, l, g, dE = state
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
-
-    # Not needed
-    # time += eps
-
-    return xx, uuu, ll, gg, kinetic_change, time
+    dEE = kinetic_change + ll - l
+    return xx, uuu, ll, gg, dEE
 end
 
 function Energy(target::Target,
                 x::AbstractVector, xx::AbstractVector,
                 E::Number, kinetic_change::Number)
-    nlogp = target.nlogp(x)
-    nllogp = target.nlogp(xx)
-    EE = Energy(nlogp, nllogp, E, kinetic_change)
+    l = target.nlogp(x)
+    ll = target.nlogp(xx)
+    dE = kinetic_change + ll - l
+    EE = E + dE
     return -nllogp, EE
-end
-
-function Energy(l::Number, ll::Number,
-                E::Number, kinetic_change::Number)
-    return E + kinetic_change + ll - l
 end
 
 function Init(sampler::Sampler, target::Target; kwargs...)
@@ -160,21 +152,16 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     u = Random_unit_vector(sampler, target) #random initial direction
 
     sample = [target.inv_transform(x); 0.0; -l]
-    state = (x, u, l, g, 0.0, 0.0)
+    state = (x, u, l, g, 0.0)
     return state, sample
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-    x, u, l, g, E, time = state
+    x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, kinetic_change, time = step
-    if get(kwargs, :monitor_energy, false)
-        EE = Energy(l ,ll, E, kinetic_change)
-    else
-        EE = 0.0
-    end
-    return step, [target.inv_transform(xx); EE; ll]
+    xx, uu, ll, gg, dEE = step
+    return step, [target.inv_transform(xx); dE + dEE; ll]
 end
 
 

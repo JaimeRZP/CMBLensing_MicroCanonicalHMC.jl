@@ -22,62 +22,28 @@ function accept_reject_step(old_state, new_state)
 
     return tru, Loss, X, U, L, G, Var
 end
+=#
 
-function Virial_loss(xs, gs)
+function Virial_loss(x::AbstractMatrix, g::AbstractMatrix)
 """loss^2 = (1/d) sum_i (virial_i - 1)^2"""
 
-    virials = mean(xs*gs) #should be all close to 1 if we have reached the typical set
-    return sqrt.(mean((virials .- 1.0).^2))
+    #should be all close to 1 if we have reached the typical set
+    v = mean(x .* g, dims=1)  # mean over params
+    return sqrt.(mean((v .- 1.0).^2))
 end
 
-function Init_burnin(sampler::Sampler, target::Target, sampler_init)
-    sett = sampler.settings
-    eps = sampler.hyperameter.eps
-    L = sampler.hyperameter.L
-    varE_wanted = sampler.settings.VarE_wanted
-    loss, x, u, l, g = sampler_init
-    steps = 0
-    fail_count = 0
-    never_rejected = true
-    sigma = ones(target.d)
+function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
+                     state; kwargs...)
+    steps, loss, fail_count, never_rejected, x, u, l, g = state
+    # Update diagonal conditioner
+    sampler.hyperparameters.sigma = std(x, dims=2) #std over particles
 
-    init = (steps, loss, fail_count, never_rejected,
-            x, u, l, g, L, eps, sigma, VarE_wanted)
-    return init
-end
+    step = Dynamics(sampler, target, state)
+    xx, uu, ll, gg, kinetic_change, time = step
+    EE = dEnergy(l ,ll, E, kinetic_change)
 
-function Init_parallel(sampler::EnsembleSampler, target::Target; kwargs...)
-
-    sett = sampler.settings
-    kwargs = Dict(kwargs)
-    ### initial conditions ###
-
-    if :initial_x ∈ keys(kwargs)
-        x0 = target.transform(kwargs[:initial_x])
-        get_x0 = key -> x0
-        nothing
-    else
-        get_x0 = key -> target.prior_draw(key)
-    end
-
-    xs = target.prior_draw(sett.key)
-    ls, gs = target.nlogp_grad_nlogp(xs)
-    virials = mean(xs .* gs, dims=1)
-    loss = mean((1 .- virials).^2)
-    sng = -2.0 .* (virials .< 1.0) .+ 1.0
-    us = -gs ./ sqrt.(sum(gs.^2))
-    us .*= sng
-    return loss, xs, us, ls, gs
-end
-
-function Step_burnin(sampler::Sampler, target::Target, state; kwargs...)
-    steps, loss, fail_count, never_rejected, x, u, l, g, key, L, eps, sigma, varE = state
-    sigma = std(x, dims=1)  # diagonal conditioner
-
-    xx, uu, ll, gg, kinetic_change, key = self.dynamics(x, u, g, key, L, eps, sigma)  # update particles by one step
-
-    loss_new = self.virial_loss(xx, gg)
-    varE_new = jnp.average(jnp.square(kinetic_change + ll - l)) / self.Target.d
+    lloss = Virial_loss(xx, gg)
+    varEE = mean((EE).^2)/target.target.d
 
     #will we accept the step?
     accept, loss, x, u, l, g, varE = accept_reject_step(loss, x, u, l, g, varE, loss_new, xx, uu, ll, gg, varE_new)
@@ -93,12 +59,22 @@ function Step_burnin(sampler::Sampler, target::Target, state; kwargs...)
     return steps + 1, loss, fail_count, never_rejected, x, u, l, g, key, L, eps, sigma, varE
 end
 
-function Burnin_parallel(sampler::Sampler, target::Target; kwargs...)
-    init = Init_burnin(sampler, target)
-    return nothing
-end
+function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
+                     init)
+    x, _, l, g, dE = init
+    v = mean(x .* g, dims=1)
+    loss = mean((1 .- v).^2)
+    sng = -2.0 .* (v .< 1.0) .+ 1.0
+    u = -g ./ sqrt.(sum(g.^2, dims=2))
+    u .*= sng
+    steps = 0
+    fail_count = 0
+    never_rejected = true
 
-=#
+    init = (steps, loss, fail_count, never_rejected,
+            x, u, l, g)
+    return init
+end
 
 function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
     @info "Not Implemented using L = sqrt(target.d)"
@@ -119,10 +95,10 @@ function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
 end
 
 function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
-    sett = sampler.settings
-
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    init = Init_burnin(sampler, target, init)
 
     # Init guess
     if sampler.hyperparameters.eps == 0.0
