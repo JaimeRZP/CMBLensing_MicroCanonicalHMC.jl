@@ -18,21 +18,14 @@ function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
     xx, uu, ll, gg, dEE = step
     lloss = Virial_loss(xx, gg)
 
-    sigma = std(xx, dims=2)
     if dialog
-        println("Virial loss: ", lloss, " --> sigma: ", sigma)
+        println("Virial loss: ", lloss)
     end
 
-    if (all(isfinite(xx)))
-        #Update the preconditioner
-        sampler.hyperparameters.sigma = sigma
-        if (abs(lloss/loss - 1) < 0.05)
-            return true, step
-        else
-            return false, step
-        end
+    if (abs(lloss/loss - 1) < 0.05)
+        return true, step
     else
-        return false, init
+        return false, step
     end
 end
 
@@ -58,10 +51,19 @@ function tune_sigma(sampler::EnsembleSampler, target::ParallelTarget, init;
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
+    d = target.target.d
     loss, step = Init_burnin(sampler, target, init; kwargs...)
 
-    for i in 1:burnin
-        finished, step = Step_burnin(sampler, target, loss, step; kwargs...)
+    xs, _, _, _, _ = step
+    sampler.hyperparameter.sigma = std(xs, dims=2)
+
+    for i in 2:burnin
+        finished, step = Step_burnin(sampler, target, loss, step;
+                                     steps=steps, kwargs...)
+        x, _, _, _, _ = step
+        xs = [xs; x]
+        sampler.hyperparameter.sigma = std(xs, dims=2)
+
         if finished
             @info "Virial loss condition met during burn-in"
             break
