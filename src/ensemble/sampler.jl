@@ -152,7 +152,7 @@ function Sample(sampler::EnsembleSampler, target::Target,
     target = ParallelTarget(target, nchains)
 
     state, sample = Init(sampler, target; kwargs...)
-    tune_hyperparameters(sampler, target, state; kwargs...)
+    state, sample = Burin(sampler, target, state; kwargs...)
 
     d = target.target.d
     chains = zeros(num_steps, nchains, d+2)
