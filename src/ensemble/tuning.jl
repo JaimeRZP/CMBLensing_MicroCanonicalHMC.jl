@@ -1,29 +1,3 @@
-#=
-function accept_reject_step(old_state, new_state)
-    loss, x, u, l, g, varE = old_state
-    loss_new, xx, uu, ll, gg, varE_new = new_state
-
-    no_nans = all(isfinite(xx))
-    tru = (loss_new < loss) * no_nans
-    fals = (1 - tru)
-    Loss = loss_new * tru + loss * false
-
-    replace!(xx, NaN=>0.0)
-    replace!(uu, NaN=>0.0)
-    replace!(ll, NaN=>0.0)
-    replace!(gg, NaN=>0.0)
-    replace!(varE_new, NaN=>0.0)
-
-    X = xx * tru + x * fals
-    U = uu * tru + u * fals
-    L = ll * tru + l * fals
-    G = gg * tru + g * fals
-    Var = varE_new * tru + varE * fals
-
-    return tru, Loss, X, U, L, G, Var
-end
-=#
-
 function Virial_loss(x::AbstractMatrix, g::AbstractMatrix)
 """loss^2 = (1/d) sum_i (virial_i - 1)^2"""
 
@@ -34,33 +8,35 @@ end
 
 function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
                      state; kwargs...)
-    steps, loss, fail_count, never_rejected, x, u, l, g = state
+    steps, loss, fail_count, never_rejected, x, u, l, g, dE = state
     # Update diagonal conditioner
     sampler.hyperparameters.sigma = std(x, dims=2) #std over particles
 
     step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, kinetic_change, time = step
-    EE = dEnergy(l ,ll, E, kinetic_change)
-
+    xx, uu, ll, gg, dEE = step
     lloss = Virial_loss(xx, gg)
-    varEE = mean((EE).^2)/target.target.d
 
     #will we accept the step?
-    accept, loss, x, u, l, g, varE = accept_reject_step(loss, x, u, l, g, varE, loss_new, xx, uu, ll, gg, varE_new)
-    #Ls.append(loss)
-    #X.append(x)
-    never_rejected *= accept #True if no step has been rejected so far
-    fail_count = (fail_count + 1) * (1-accept) #how many rejected steps did we have in a row
-
-                    #reduce eps if rejected    #increase eps if never rejected        #keep the same
-    eps = eps * ((1-accept) * self.reduce + accept * (never_rejected * self.increase + (1-never_rejected) * 1.0))
-    #epss.append(eps)
-
-    return steps + 1, loss, fail_count, never_rejected, x, u, l, g, key, L, eps, sigma, varE
+    # if reject --> reduce eps
+    # if accept
+    #   if never_rejected --> increase eps
+    if (lloss < loss) && (all(isfinite(xx)))
+        accept = true
+        fail_count = 0
+        if never_rejected
+           sampler.hyperparameter.eps *= 2.0
+        end
+        return steps+1, lloss, fail_count, never_rejected, xx, uu, ll, gg, dEE
+    else
+        accept = false
+        never_rejected *= accept
+        fail_count += 1
+        sampler.hyperparameter.eps *= 0.5
+        return steps+1, loss, fail_count, never_rejected, x, u, l, g, dE
+    end
 end
 
-function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
-                     init)
+function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget, init)
     x, _, l, g, dE = init
     v = mean(x .* g, dims=1)
     loss = mean((1 .- v).^2)
@@ -70,11 +46,69 @@ function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
     steps = 0
     fail_count = 0
     never_rejected = true
-
     init = (steps, loss, fail_count, never_rejected,
-            x, u, l, g)
+            x, u, l, g, dE)
     return init
 end
+
+function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
+    @info "Not Implemented using L = sqrt(target.d)"
+    sampler.hyperparameters.L = sqrt(target.d)
+end
+
+function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
+    eps = sampler.hyperparameters.eps
+    L = sampler.hyperparameters.L
+    d = target.target.d
+    sampler.hyperparameters.nu = eval_nu(eps, L, d)
+end
+
+function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init, burnin)
+    ### debugging tool ###
+    dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    init = Init_burnin(sampler, target, init)
+
+    if sampler.hyperparameters.L == 0.0
+        @info "Tuning L ⏳"
+        tune_L!(sampler, target, init; kwargs...)
+    end
+
+    for i in 1:burnin
+        step_burnin = Step_burnin(sampler, target, init)
+        steps, loss, fail_count, never_rejected, x, u, l, g, dE = step_burnin
+
+        if loss < sett.loss_wanted
+            @info "Virial loss condition met during burn-in"
+            break
+        end
+
+        if fail_count >= sett.tune_max_iter
+            @info "Maximum number of failed proposals reached during burn-in"
+            break
+        end
+
+        if i == burnin
+            @info "Maximum number of steps reached during burn-in"
+        end
+    end
+
+    ### determine the epsilon for sampling ###
+    #the epsilon before the row of failures, we will take this as a baseline
+    eps = sampler.hyperparameters.eps * (1.0/2.0)^fail_count
+    #some range around the wanted energy error
+    energy_range = sett.varE_wanted .* 10 .^ (range(-2, stop=2, length=sett.num_energy_points))
+    #assume Var[E] ~ eps^6 and use the already computed point to set out the grid for extrapolation
+    varE =  mean(dE .^ 2)/target.target.d
+    epsilon = eps .* (energy_range ./ varE) .^ (1.0/6.0)
+
+    tune_nu!(sampler, target)
+    return nothing
+end
+
+################
+### Old code ###
+################
 
 function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
     @info "Not Implemented using L = sqrt(target.d)"

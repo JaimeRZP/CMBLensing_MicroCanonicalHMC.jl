@@ -1,13 +1,37 @@
+mutable struct EnsembleSettings
+    nchains::Int
+    key::MersenneTwister
+    varE_wanted::Float64
+    loss_wanted::Int
+    tune_maxiter::Int
+    num_energy_points::Int
+    integrator::String
+end
+
+EnsembleSettings(;kwargs...) = begin
+    kwargs = Dict(kwargs)
+    seed = get(kwargs, :seed, 0)
+    key = MersenneTwister(seed)
+    nchains = get(kwargs, :nchains, 1)
+    varE_wanted = get(kwargs, :varE_wanted, 0.2)
+    loss_wanted = get(kwargs, :loss_wanted, 0)
+    tune_maxiter = get(kwargs, :tune_maxiter, 6)
+    num_energy_points = get(kwargs, :num_energy_points, 10)
+    integrator = get(kwargs, :integrator, "LF")
+    EnsembleSettings(nchains, key,
+             varE_wanted, loss_wanted, tune_maxiter, num_energy_points,
+             integrator)
+end
 
 struct EnsembleSampler <: AbstractMCMC.AbstractSampler
-   settings::Settings
+   settings::EnsembleSettings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function
 end
 
 function MCHMC(eps, L, nchains; kwargs...)
 
-   sett = Settings(;nchains=nchains, kwargs...)
+   sett = EnsembleSettings(;nchains=nchains, kwargs...)
    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
 
    if sett.integrator == "LF"  # leapfrog
