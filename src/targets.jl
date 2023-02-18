@@ -6,9 +6,12 @@ mutable struct TuringTarget <: Target
     nlogp::Function
     grad_nlogp::Function
     nlogp_grad_nlogp::Function
+    hess_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
+    MAP::AbstractVector
+    MAP_t::AbstractVector
 end
 
 function _get_dists(vi)
@@ -16,7 +19,7 @@ function _get_dists(vi)
     return [md.dists[1] for md in mds]
 end
 
-TuringTarget(model; kwargs...) = begin
+TuringTarget(model; compute_MAP=true, kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
     vi_t = Turing.link!!(vi, model)
@@ -27,7 +30,6 @@ TuringTarget(model; kwargs...) = begin
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
     ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
     ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
-
 
     function transform(x)
         xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
@@ -51,11 +53,22 @@ TuringTarget(model; kwargs...) = begin
         return -1 .* ∂lπ∂θ(xt)
     end
 
+    function hess_nlogp(xt)
+        return ForwardDiff.hessian(nlogp, xt)
+    end
+
     function prior_draw(key)
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
         vi_t = Turing.link!!(vi, model)
         return vi_t[DynamicPPL.SampleFromPrior()]
+    end
+
+    if compute_MAP
+        MAP_t = Optim.minimizer(optimize(nlogp, prior_draw(0.0), Newton(); autodiff = :forward))
+        MAP = inv_transform(MAP_t)
+    else
+        MAP = MAP_t = zeros(d)
     end
 
     TuringTarget(
@@ -66,9 +79,12 @@ TuringTarget(model; kwargs...) = begin
                nlogp,
                grad_nlogp,
                nlogp_grad_nlogp,
+               hess_nlogp,
                transform,
                inv_transform,
-               prior_draw)
+               prior_draw,
+               MAP,
+               MAP_t)
 end
 
 mutable struct ParallelTarget <: Target

@@ -38,6 +38,17 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
     end
 end
 
+function tune_sigma!(sampler::Sampler, target::Target; kwargs...)
+    dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    MAP_t = target.MAP_t
+    Hess = target.hess_nlogp(MAP_t)
+    mass_mat = pinv(Hess)
+    sigma = sqrt.(diag(mass_mat))
+    sampler.hyperparameters.sigma = sigma
+    @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
+end
+
 function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
@@ -97,6 +108,11 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     dialog = get(kwargs, :dialog, false)
 
     # Init guess
+    if sampler.hyperparameters.sigma == [0.0]
+        @info "Tuning sigma ⏳"
+        tune_sigma!(sampler, target; kwargs...)
+    end
+
     if sampler.hyperparameters.eps == 0.0
         @info "Tuning eps ⏳"
         sampler.hyperparameters.eps = 0.5
@@ -106,13 +122,11 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
             end
         end
     end
+
     if sampler.hyperparameters.L == 0.0
         @info "Tuning L ⏳"
         tune_L!(sampler, target, init; kwargs...)
-    else
-        @info "Using given hyperparameters"
-        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
-        @info string("Found L: ", sampler.hyperparameters.L, " ✅")
     end
+
     tune_nu!(sampler, target)
 end

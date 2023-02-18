@@ -11,12 +11,11 @@ Hyperparameters(;kwargs...) = begin
    L = get(kwargs, :L, 0.0)
    nu = get(kwargs, :nu, 0.0)
    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
-   sigma = get(kwargs, :sigma, [1.0])
+   sigma = get(kwargs, :sigma, [0.0])
    Hyperparameters(eps, L, nu, lambda_c, sigma)
 end
 
 mutable struct Settings
-    nchains::Int
     key::MersenneTwister
     varE_wanted::Float64
     burn_in::Int
@@ -29,13 +28,12 @@ Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
-    nchains = get(kwargs, :nchains, 1)
     varE_wanted = get(kwargs, :varE_wanted, 0.2)
     burn_in = get(kwargs, :burn_in, 0)
     tune_samples = get(kwargs, :tune_samples, 1000)
     tune_maxiter = get(kwargs, :tune_maxiter, 10)
     integrator = get(kwargs, :integrator, "LF")
-    Settings(nchains, key,
+    Settings(key,
              varE_wanted, burn_in, tune_samples, tune_maxiter,
              integrator)
 end
