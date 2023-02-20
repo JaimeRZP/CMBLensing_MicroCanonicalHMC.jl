@@ -1,6 +1,30 @@
+function tune_what(sampler::EnsembleSampler)
+    tune_sigma, tune_eps, tune_L = false, false, false
+
+    if sampler.hyperparameters.sigma == [0.0]
+        @info "Tuning sigma ⏳"
+        tune_sigma = true
+    end
+
+    if sampler.hyperparameters.eps == 0.0
+        @info "Tuning eps ⏳"
+        tune_eps = true
+        # Initial eps guess
+        sampler.hyperparameters.eps = 0.5
+    end
+
+    if sampler.hyperparameters.L == 0.0
+        @info "Tuning L ⏳"
+        tune_L = true
+    end
+
+    return tune_sigma, tune_eps, tune_L
+end
+
 function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
-    @info "Not Implemented using L = sqrt(target.d)"
-    sampler.hyperparameters.L = sqrt(target.d)
+    @warn "L-tuning not Implemented using L = sqrt(target.d)"
+    d = target.target.d
+    sampler.hyperparameters.L = sqrt(d)
 end
 
 function Virial_loss(x::AbstractMatrix, g::AbstractMatrix)
@@ -12,20 +36,28 @@ function Virial_loss(x::AbstractMatrix, g::AbstractMatrix)
 end
 
 function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
-                     loss, init; kwargs...)
+                     init; kwargs...)
     dialog = get(kwargs, :dialog, false)
+    x, u, l, g, dE = init
+    loss = Virial_loss(x, g)
     step = Dynamics(sampler, target, init)
     xx, uu, ll, gg, dEE = step
     lloss = Virial_loss(xx, gg)
-
     if dialog
-        println("Virial loss: ", lloss)
+        println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
     end
 
-    if (abs(lloss/loss - 1) < 0.05)
-        return true, step
+    no_divergences = isfinite(loss)
+    if no_divergences
+        if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.001)
+            return true, step, (target.inv_transform(xx), dE .+ dEE, -ll)
+        else
+            return false, step, (target.inv_transform(xx), dE .+ dEE, -ll)
+        end
     else
-        return false, step
+        @warn "Divergences encountered during burn-in. Reducing eps!"
+        sampler.hyperparameters.eps *= 0.5
+        return false, init, (target.inv_transform(x), dE, -l)
     end
 end
 
@@ -43,36 +75,7 @@ function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
         println("Initial Virial loss: ", loss)
     end
 
-    return  loss, (x, u, l, g, dE)
-end
-
-function tune_sigma(sampler::EnsembleSampler, target::ParallelTarget, init;
-                     burnin=10, kwargs...)
-    ### debugging tool ###
-    dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings
-    d = target.target.d
-    loss, step = Init_burnin(sampler, target, init; kwargs...)
-
-    xs, _, _, _, _ = step
-    sampler.hyperparameter.sigma = std(xs, dims=2)
-
-    for i in 2:burnin
-        finished, step = Step_burnin(sampler, target, loss, step;
-                                     steps=steps, kwargs...)
-        x, _, _, _, _ = step
-        xs = [xs; x]
-        sampler.hyperparameter.sigma = std(xs, dims=2)
-
-        if finished
-            @info "Virial loss condition met during burn-in"
-            break
-        end
-        if i == burnin
-            @info "Maximum number of steps reached during burn-in"
-        end
-    end
-    return step
+    return  loss, (x, u, l, g, dE), (target.inv_transform(x), dE, -l)
 end
 
 function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
@@ -82,7 +85,7 @@ function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwar
     d = target.target.d
 
     state, (X, E, L) = Step(sampler, target, state; kwargs...)
-    varE = std(E)^2 / target.d #variance per dimension
+    varE = std(E)^2 / d #variance per dimension
     if dialog
         println("eps: ", eps, " --> VarE: ", varE)
     end
@@ -91,13 +94,13 @@ function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwar
     if no_divergences
         success = varE < varE_wanted #we are done
         if !success
-            sampler.hyperparameters.eps = 0.5 * eps
+            sampler.hyperparameters.eps *= 0.5
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
         end
     else
         success = false
-        sampler.hyperparameters.eps = 0.5 * eps
+        sampler.hyperparameters.eps *= 0.5
     end
 
     return success
@@ -110,39 +113,63 @@ function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
+function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init, burnin; kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
+    d = target.target.d
 
-    if sampler.hyperparameters.L == 0.0
-        @info "Tuning L ⏳"
+    @info "Burn-in started ⏳"
+    tune_sigma, tune_eps, tune_L = tune_what(sampler)
+
+    if tune_L
         tune_L!(sampler, target, init; kwargs...)
     end
-    if sampler.hyperparameters.sigma == [0.0]
-        @info "Tuning sigma ⏳"
-        x, _, _, _, _ = init
-        sampler.hyperparameters.sigma = std(x, dims=2)
-        init = tune_sigma(sampler, target, init; kwargs...)
-        @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
+
+    loss, init, sample = Init_burnin(sampler, target, init; kwargs...)
+
+    if tune_sigma
+        xs, _, _, _, _ = init
+        sigma = vec(std(xs, dims=1))
+        sampler.hyperparameters.sigma = sigma
+        if dialog
+            println(string("Initial sigma: ", sigma))
+        end
     end
-    if sampler.hyperparameters.eps == 0.0
-        @info "Tuning eps ⏳"
-        sampler.hyperparameters.eps = sqrt(target.target.d)
-        for i in 1:sett.tune_maxiter
-            if tune_eps!(sampler, target, init; kwargs...)
-                break
+
+    for i in 2:burnin
+        finished, init, sample = Step_burnin(sampler, target, init; kwargs...)
+        if tune_sigma
+            x, _, _, _, _ = init
+            xs = [xs; x]
+            sigma = vec(std(xs, dims=1))
+            sampler.hyperparameters.sigma = sigma
+            if dialog
+                println(string("Sigma --> ", sigma))
             end
         end
-    else
-        @info "Using given hyperparameters"
-        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
-        @info string("Found L: ", sampler.hyperparameters.L, " ✅")
+
+        if finished
+            @info string("Virial loss condition met during burn-in at step: ", i)
+            break
+        end
+        if i == burnin
+            @warn "Maximum number of steps reached during burn-in"
+        end
     end
+
+    if tune_eps
+        for i in 1:sett.VarE_maxiter
+            if tune_eps!(sampler, target, init; kwargs...)
+                @info string("VarE condition met during eps tuning at step: ", i)
+                break
+            end
+            if i == sett.VarE_maxiter
+                @warn "Maximum number of steps reached during eps tuning"
+            end
+        end
+    end
+
     tune_nu!(sampler, target)
-
-    x, u, l, g, dE = init
-    sample = (target.inv_transform(x), dE, -l)
-
     return init, sample
 end

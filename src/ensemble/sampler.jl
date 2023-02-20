@@ -1,9 +1,9 @@
 mutable struct EnsembleSettings
     nchains::Int
     key::MersenneTwister
-    varE_wanted::Float64
     loss_wanted::Int
-    tune_maxiter::Int
+    varE_wanted::Float64
+    VarE_maxiter::Int
     num_energy_points::Int
     integrator::String
 end
@@ -13,13 +13,13 @@ EnsembleSettings(;kwargs...) = begin
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
     nchains = get(kwargs, :nchains, 1)
+    loss_wanted = get(kwargs, :loss_wanted, 2.0)
     varE_wanted = get(kwargs, :varE_wanted, 0.2)
-    loss_wanted = get(kwargs, :loss_wanted, 0)
-    tune_maxiter = get(kwargs, :tune_maxiter, 6)
+    VarE_maxiter = get(kwargs, :varE_maxiter, 10)
     num_energy_points = get(kwargs, :num_energy_points, 10)
     integrator = get(kwargs, :integrator, "LF")
     EnsembleSettings(nchains, key,
-             varE_wanted, loss_wanted, tune_maxiter, num_energy_points,
+             loss_wanted, varE_wanted, VarE_maxiter, num_energy_points,
              integrator)
 end
 
@@ -152,7 +152,7 @@ function Sample(sampler::EnsembleSampler, target::Target,
     target = ParallelTarget(target, nchains)
 
     state, sample = Init(sampler, target; kwargs...)
-    state, sample = Burin(sampler, target, state; kwargs...)
+    state, sample = Burnin(sampler, target, state, burnin; kwargs...)
 
     d = target.target.d
     chains = zeros(num_steps, nchains, d+2)
