@@ -4,7 +4,7 @@ export Settings, Hyperparameters, MCHMC, Sample
 export Leapfrog, Minimal_norm
 export StandardGaussianTarget, CustomTarget, ParallelTarget, CMBLensingTarget
 
-using Interpolations, LinearAlgebra, Statistics,
+using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff, Distributed
 
 abstract type Target end

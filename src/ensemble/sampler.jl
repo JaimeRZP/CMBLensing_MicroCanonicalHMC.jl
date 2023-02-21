@@ -23,7 +23,7 @@ EnsembleSettings(;kwargs...) = begin
              integrator)
 end
 
-struct EnsembleSampler <: AbstractMCMC.AbstractSampler
+struct EnsembleSampler
    settings::EnsembleSettings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function

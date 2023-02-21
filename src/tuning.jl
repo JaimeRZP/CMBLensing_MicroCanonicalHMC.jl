@@ -1,6 +1,6 @@
-function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
+function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
     @warn "L-tuning not Implemented using L = sqrt(target.d)"
-    d = target.target.d
+    d = target.d
     sampler.hyperparameters.L = sqrt(d)
     @info string("Found L: ", sampler.hyperparameters.L, " ✅")
 end

@@ -1,5 +1,5 @@
 using Test
-using MCHMC
+using MicroCanonicalHMC
 
 @testset "All tests" begin
     

@@ -38,7 +38,7 @@ Settings(;kwargs...) = begin
              integrator)
 end
 
-struct Sampler <: AbstractMCMC.AbstractSampler
+struct Sampler
    settings::Settings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function
