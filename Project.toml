@@ -4,6 +4,7 @@ authors = ["Jaime Ruiz Zapatero <jaimerz011235813@gmail.com>", "Marco Bonici <bo
 version = "0.1.0"
 
 [deps]
+CMBLensing = "b60c06c0-7e54-11e8-3788-4bd722d65317"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ForwardDiff = "f6369f11-7733-5829-9624-2563aa707210"

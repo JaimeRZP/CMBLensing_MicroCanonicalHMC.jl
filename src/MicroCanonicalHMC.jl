@@ -6,6 +6,7 @@ export StandardGaussianTarget, CustomTarget, ParallelTarget, CMBLensingTarget
 
 using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff, Distributed
+using CMBLensing
 
 abstract type Target end
 
