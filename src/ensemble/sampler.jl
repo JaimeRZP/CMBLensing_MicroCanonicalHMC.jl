@@ -1,7 +1,7 @@
 mutable struct EnsembleSettings
     nchains::Int
     key::MersenneTwister
-    loss_wanted::Int
+    loss_wanted::Float64
     varE_wanted::Float64
     VarE_maxiter::Int
     num_energy_points::Int
@@ -13,10 +13,10 @@ EnsembleSettings(;kwargs...) = begin
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
     nchains = get(kwargs, :nchains, 1)
-    loss_wanted = get(kwargs, :loss_wanted, 2.0)
-    varE_wanted = get(kwargs, :varE_wanted, 0.2)
+    loss_wanted = get(kwargs, :loss_wanted, 1.0)
+    varE_wanted = get(kwargs, :varE_wanted, 0.01)
     VarE_maxiter = get(kwargs, :varE_maxiter, 10)
-    num_energy_points = get(kwargs, :num_energy_points, 10)
+    num_energy_points = get(kwargs, :num_energy_points, 20)
     integrator = get(kwargs, :integrator, "LF")
     EnsembleSettings(nchains, key,
              loss_wanted, varE_wanted, VarE_maxiter, num_energy_points,
@@ -45,6 +45,10 @@ function MCHMC(eps, L, nchains; kwargs...)
    end
 
    return EnsembleSampler(sett, hyperparameters, hamiltonian_dynamics)
+end
+
+function MCHMC(nchains; kwargs...)
+    return MCHMC(0.0, 0.0, nchains; kwargs...)
 end
 
 function Random_unit_vector(sampler::EnsembleSampler, target::ParallelTarget; normalize=true)
@@ -140,7 +144,8 @@ end
 
 
 function Sample(sampler::EnsembleSampler, target::Target,
-                num_steps::Int, burnin::Int; kwargs...)
+                num_steps::Int, burnin::Int;
+                remove_initial=0,  kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -164,10 +169,10 @@ function Sample(sampler::EnsembleSampler, target::Target,
         chains[i, :, :] = [X E L]
     end
 
-    return unroll_chains(chains, burnin)
+    return unroll_chains(chains; burnin=remove_initial+1)
 end
 
-function unroll_chains(chains, burnin)
+function unroll_chains(chains; burnin=1)
     chains = chains[burnin:end, :, :]
     nsteps, nchains, nparams = axes(chains)
     chain = []
