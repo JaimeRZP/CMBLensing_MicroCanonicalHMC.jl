@@ -5,6 +5,7 @@ mutable struct TuringTarget <: Target
     dists
     nlogp::Function
     grad_nlogp::Function
+    nlogp_grad_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -24,7 +25,9 @@ TuringTarget(model; kwargs...) = begin
     d = length(vsyms)
 
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
-    ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
+    ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
+    ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
+
 
     function transform(x)
         xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
@@ -37,15 +40,21 @@ TuringTarget(model; kwargs...) = begin
     end
 
     function nlogp(xt)
-        #x = inv_transform(xt)
-        return -1.0 .* ℓπ(xt)
+        return -ℓπ(xt)
     end
 
     function grad_nlogp(xt)
         return ForwardDiff.gradient(nlogp, xt)
     end
 
+    function nlogp_grad_nlogp(xt)
+        return -1 .* ∂lπ∂θ(xt)
+    end
+
     function prior_draw(key)
+        ctxt = model.context
+        vi = DynamicPPL.VarInfo(model, ctxt)
+        vi_t = Turing.link!!(vi, model)
         return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
@@ -56,9 +65,82 @@ TuringTarget(model; kwargs...) = begin
                dists,
                nlogp,
                grad_nlogp,
+               nlogp_grad_nlogp,
                transform,
                inv_transform,
                prior_draw)
+end
+
+mutable struct ParallelTarget <: Target
+    target::Target
+    nlogp::Function
+    grad_nlogp::Function
+    nlogp_grad_nlogp::Function
+    transform::Function
+    inv_transform::Function
+    prior_draw::Function
+end
+
+ParallelTarget(target::Target, nchains) = begin
+    d = target.d
+    function transform(xs)
+        xs_t = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs_t[i, :] .= target.transform(xs[i, :])
+        end
+        return xs_t
+    end
+
+    function inv_transform(xs_t)
+        xs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs[i, :] .= target.inv_transform(xs_t[i, :])
+        end
+        return xs
+    end
+
+    function nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            ls[i] = target.nlogp(xs_t[i, :])
+        end
+        return ls
+    end
+
+    function grad_nlogp(xs_t)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            gs[i, :] .= target.grad_nlogp(xs_t[i, :])
+        end
+        return gs
+    end
+
+    function nlogp_grad_nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            ls[i], = target.nlogp(xs_t[i, :])
+            gs[i, :] = target.grad_nlogp(xs_t[i, :])
+        end
+        return ls , gs
+    end
+
+    function prior_draw(key)
+        xs_t = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs_t[i, :] .= target.prior_draw(key)
+        end
+        return xs_t
+    end
+
+    ParallelTarget(
+        target,
+        nlogp,
+        grad_nlogp,
+        nlogp_grad_nlogp,
+        transform,
+        inv_transform,
+        prior_draw)
 end
 
 mutable struct CustomTarget <: Target
