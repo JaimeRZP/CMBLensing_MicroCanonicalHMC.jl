@@ -1,13 +1,37 @@
+mutable struct EnsembleSettings
+    nchains::Int
+    key::MersenneTwister
+    loss_wanted::Float64
+    varE_wanted::Float64
+    VarE_maxiter::Int
+    num_energy_points::Int
+    integrator::String
+end
+
+EnsembleSettings(;kwargs...) = begin
+    kwargs = Dict(kwargs)
+    seed = get(kwargs, :seed, 0)
+    key = MersenneTwister(seed)
+    nchains = get(kwargs, :nchains, 1)
+    loss_wanted = get(kwargs, :loss_wanted, 1.0)
+    varE_wanted = get(kwargs, :varE_wanted, 0.01)
+    VarE_maxiter = get(kwargs, :varE_maxiter, 10)
+    num_energy_points = get(kwargs, :num_energy_points, 20)
+    integrator = get(kwargs, :integrator, "LF")
+    EnsembleSettings(nchains, key,
+             loss_wanted, varE_wanted, VarE_maxiter, num_energy_points,
+             integrator)
+end
 
 struct EnsembleSampler <: AbstractMCMC.AbstractSampler
-   settings::Settings
+   settings::EnsembleSettings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function
 end
 
 function MCHMC(eps, L, nchains; kwargs...)
 
-   sett = Settings(;nchains=nchains, kwargs...)
+   sett = EnsembleSettings(;nchains=nchains, kwargs...)
    hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
 
    if sett.integrator == "LF"  # leapfrog
@@ -21,6 +45,10 @@ function MCHMC(eps, L, nchains; kwargs...)
    end
 
    return EnsembleSampler(sett, hyperparameters, hamiltonian_dynamics)
+end
+
+function MCHMC(nchains; kwargs...)
+    return MCHMC(0.0, 0.0, nchains; kwargs...)
 end
 
 function Random_unit_vector(sampler::EnsembleSampler, target::ParallelTarget; normalize=true)
@@ -75,33 +103,13 @@ end
 
 function Dynamics(sampler::EnsembleSampler, target::ParallelTarget, state)
     """One step of the Langevin-like dynamics."""
-
-    x, u, l, g, time = state
-
+    x, u, l, g, dE = state
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)
-
-    # Not needed
-    # time += eps
-
-    return xx, uuu, ll, gg, kinetic_change, time
-end
-
-function Energy(target::Target,
-                x::AbstractMatrix, xx::AbstractMatrix,
-                E::AbstractVector, kinetic_change::AbstractVector)
-    nlogp = target.nlogp(x)
-    nllogp = target.nlogp(xx)
-    EE = Energy(nlogp, nllogp, E, kinetic_change)
-    return -nllogp, EE
-end
-
-function Energy(l::AbstractVector, ll::AbstractVector,
-                E::AbstractVector, kinetic_change::AbstractVector)
-    return E .+ kinetic_change .+ ll .- l
+    dEE = kinetic_change .+ ll .- l
+    return xx, uuu, ll, gg, dEE
 end
 
 function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
@@ -118,29 +126,26 @@ function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     g .*= d/(d-1)
     u = Random_unit_vector(sampler, target) #random initial direction
 
-    E = zeros(sett.nchains)
-    sample = (target.inv_transform(x), E, -l)
-    state = (x, u, l, g, E, 0.0)
+    dE = zeros(sett.nchains)
+    sample = (target.inv_transform(x), dE, -l)
+    state = (x, u, l, g, dE)
     return state, sample
 end
 
 function Step(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
     sett = sampler.settings
-    x, u, l, g, E, time = state
+    x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, kinetic_change, time = step
-    if get(kwargs, :monitor_energy, false)
-        EE = Energy(l ,ll, E, kinetic_change)
-    else
-        EE = zeros(sett.nchains)
-    end
-    return step, (target.inv_transform(xx), EE, -ll)
+    xx, uu, ll, gg, dEE = step
+
+    return step, (target.inv_transform(xx), dE .+ dEE, -ll)
 end
 
 
 function Sample(sampler::EnsembleSampler, target::Target,
-                num_steps::Int, burnin::Int; kwargs...)
+                num_steps::Int, burnin::Int;
+                remove_initial=0,  kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -152,7 +157,7 @@ function Sample(sampler::EnsembleSampler, target::Target,
     target = ParallelTarget(target, nchains)
 
     state, sample = Init(sampler, target; kwargs...)
-    tune_hyperparameters(sampler, target, state; kwargs...)
+    state, sample = Burnin(sampler, target, state, burnin; kwargs...)
 
     d = target.target.d
     chains = zeros(num_steps, nchains, d+2)
@@ -164,10 +169,10 @@ function Sample(sampler::EnsembleSampler, target::Target,
         chains[i, :, :] = [X E L]
     end
 
-    return unroll_chains(chains, burnin)
+    return unroll_chains(chains; burnin=remove_initial+1)
 end
 
-function unroll_chains(chains, burnin)
+function unroll_chains(chains; burnin=1)
     chains = chains[burnin:end, :, :]
     nsteps, nchains, nparams = axes(chains)
     chain = []
