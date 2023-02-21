@@ -1,16 +1,17 @@
-function Leapfrog(sampler::Sampler, target::Target,
-                  x::AbstractVector, u::AbstractVector,
-                  l::Number, g::AbstractVector)
+function Leapfrog(sampler::EnsembleSampler, target::ParallelTarget,
+                  x::AbstractMatrix, u::AbstractMatrix,
+                  l::AbstractVector, g::AbstractMatrix)
     eps = sampler.hyperparameters.eps
     sigma = sampler.hyperparameters.sigma
     return Leapfrog(target, eps, sigma, x, u, l, g)
 end
 
-function Leapfrog(target::Target,
+function Leapfrog(target::ParallelTarget,
                   eps::Number, sigma::AbstractVector,
-                  x::AbstractVector, u::AbstractVector,
-                  l::Number, g::AbstractVector)
-    d = target.d
+                  x::AbstractMatrix, u::AbstractMatrix,
+                  l::AbstractVector, g::AbstractMatrix)
+    sigma = hcat(sigma)'
+    d = target.target.d
     uu, dr1 = Update_momentum(target, eps * 0.5, g .* sigma, u)
 
     #full step in x
@@ -24,29 +25,31 @@ function Leapfrog(target::Target,
     #half step in momentum
     uu, dr2 = Update_momentum(target, eps * 0.5, gg .* sigma, uu)
 
-    kinetic_change = (dr1 + dr2) * target.d
+    kinetic_change = (dr1 .+ dr2) .* d
 
     return xx, uu, ll, gg, kinetic_change
 end
 
-function Minimal_norm(sampler::Sampler, target::Target,
-                      x::AbstractVector, u::AbstractVector,
-                      l::Number, g::AbstractVector)
+function Minimal_norm(sampler::EnsembleSampler, target::ParallelTarget,
+                      x::AbstractMatrix, u::AbstractMatrix,
+                      l::AbstractVector, g::AbstractMatrix)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
     eps = sampler.hyperparameters.eps
     lambda_c = sampler.hyperparameters.lambda_c
     sigma = sampler.hyperparameters.sigma
-    return Minimal_norm(target, eps, lambda_c, sigma, x, u, l, g)
+
+    return Minimal_norm(target, eps, lambda_c, x, u, l, g)
 end
 
-function Minimal_norm(target::Target,
+function Minimal_norm(target::ParallelTarget,
                       eps::Number, lambda_c::Number, sigma::AbstractVector,
-                      x::AbstractVector, u::AbstractVector,
-                      l::Number, g::AbstractVector)
+                      x::AbstractMatrix, u::AbstractMatrix,
+                      l::AbstractVector, g::AbstractMatrix)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
-    d = target.d
+    sigma = hcat(sigma)'
+    d = target.target.d
     uu, dr1 = Update_momentum(d, eps * lambda_c, g .* sigma, u)
 
     z = x ./ sigma # go to the latent space
@@ -64,7 +67,7 @@ function Minimal_norm(target::Target,
 
     uu, dr3 = Update_momentum(d, eps * lambda_c, gg .* sigma, uu)
 
-    kinetic_change = (dr1 + dr2 + dr3) * (d -1)
+    kinetic_change = (dr1 .+ dr2 .+ dr3) .* (d -1)
 
     return xx, uu, ll, gg, kinetic_change
 end

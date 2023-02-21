@@ -1,71 +1,3 @@
-mutable struct TuringTarget <: Target
-    d::Int
-    nlogp::Function
-    grad_nlogp::Function
-    transform::Function
-    inv_transform::Function
-    prior_draw::Function
-end
-
-function _get_dists(vi)
-    mds = values(vi.metadata)
-    return [md.dists[1] for md in mds]
-end
-
-TuringTarget(model; kwargs...) = begin
-    ctxt = model.context
-    vi = DynamicPPL.VarInfo(model, ctxt)
-    #Turing.link!!(vi, model)
-    vsyms = keys(vi)
-    d = length(vsyms)
-
-    ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi, model, ctxt))
-    ℓπ = Base.Fix1(LogDensityProblems.logdensity, ℓ)
-    #ℓπ = (args...) -> LogDensityProblems.logdensity(ℓ, args...)
-    #OPT: we probably want to use this in the future.
-    #     and merge nlogp and grad_nlogp into one function.
-    #∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
-
-    #function transform(xs)
-    #    dists = _get_dists(vi)
-    #    xxs = [invlink(dist, x) for (dist, x) in zip(dists, xs)]
-    #    return xxs
-    #end
-
-    function transform(x)
-        xt = x
-        return xt
-    end
-
-    function inv_transform(xt)
-        x = xt
-        return x
-    end
-
-    function nlogp(x)
-        return -1.0 .* ℓπ(x)
-    end
-
-    function grad_nlogp(x)
-        return ForwardDiff.gradient(nlogp, x)
-        #OPT: we probably want to use this in the future.
-        #return ∂lπ∂θ(x)[2]
-    end
-
-    function prior_draw(key)
-        x = vi[DynamicPPL.SampleFromPrior()]
-        xt = transform(x)
-        return xt
-    end
-
-    TuringTarget(d,
-               nlogp,
-               grad_nlogp,
-               transform,
-               inv_transform,
-               prior_draw)
-end
-
 mutable struct CustomTarget <: Target
     d::Int
     nlogp::Function
@@ -159,6 +91,7 @@ mutable struct CMBLensingTarget <: Target
     Λmass
     nlogp::Function
     grad_nlogp::Function
+    nlogp_grad_nlogp::Function 
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -191,7 +124,10 @@ CMBLensingTarget(prob; kwargs...) = begin
 
     function grad_nlogp(xt)
         return CMBLensing.LenseBasis(Zygote.gradient(nlogp, xt)[1])
-        #return ForwardDiff.gradient(nlogp, x)
+    end
+    
+    function nlogp_grad_nlogp(xt)
+        return nlogp(xt), grad_nlogp(xt)
     end
 
     function prior_draw(key)
@@ -205,7 +141,80 @@ CMBLensingTarget(prob; kwargs...) = begin
                      Λmass,
                      nlogp,
                      grad_nlogp,
+                     nlogp_grad_nlogp,
                      transform,
                      inv_transform,
                      prior_draw)
+end
+
+mutable struct ParallelTarget <: Target
+    target::Target
+    nlogp::Function
+    grad_nlogp::Function
+    nlogp_grad_nlogp::Function
+    transform::Function
+    inv_transform::Function
+    prior_draw::Function
+end
+
+ParallelTarget(target::Target, nchains) = begin
+    d = target.d
+    function transform(xs)
+        xs_t = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs_t[i, :] .= target.transform(xs[i, :])
+        end
+        return xs_t
+    end
+
+    function inv_transform(xs_t)
+        xs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs[i, :] .= target.inv_transform(xs_t[i, :])
+        end
+        return xs
+    end
+
+    function nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            ls[i] = target.nlogp(xs_t[i, :])
+        end
+        return ls
+    end
+
+    function grad_nlogp(xs_t)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            gs[i, :] .= target.grad_nlogp(xs_t[i, :])
+        end
+        return gs
+    end
+
+    function nlogp_grad_nlogp(xs_t)
+        ls = Vector{Real}(undef, nchains)
+        gs = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            ls[i], = target.nlogp(xs_t[i, :])
+            gs[i, :] = target.grad_nlogp(xs_t[i, :])
+        end
+        return ls , gs
+    end
+
+    function prior_draw(key)
+        xs_t = Matrix{Real}(undef, nchains, d)
+        @inbounds Threads.@threads :static for i in 1:nchains
+            xs_t[i, :] .= target.prior_draw(key)
+        end
+        return xs_t
+    end
+
+    ParallelTarget(
+        target,
+        nlogp,
+        grad_nlogp,
+        nlogp_grad_nlogp,
+        transform,
+        inv_transform,
+        prior_draw)
 end
