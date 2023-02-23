@@ -22,6 +22,9 @@ mutable struct Settings
     tune_samples::Int
     tune_maxiter::Int
     integrator::String
+    init_eps
+    init_L
+    init_sigma
 end
 
 Settings(;kwargs...) = begin
@@ -31,11 +34,14 @@ Settings(;kwargs...) = begin
     varE_wanted = get(kwargs, :varE_wanted, 0.2)
     burn_in = get(kwargs, :burn_in, 0)
     tune_samples = get(kwargs, :tune_samples, 1000)
-    tune_maxiter = get(kwargs, :tune_maxiter, 10)
+    tune_maxiter = get(kwargs, :tune_maxiter, 100)
     integrator = get(kwargs, :integrator, "LF")
+    init_eps = get(kwargs, :init_eps, nothing)
+    init_L = get(kwargs, :init_L, nothing)
+    init_sigma = get(kwargs, :init_sigma, nothing)
     Settings(key,
              varE_wanted, burn_in, tune_samples, tune_maxiter,
-             integrator)
+             integrator, init_eps, init_L, init_sigma)
 end
 
 struct Sampler <: AbstractMCMC.AbstractSampler
