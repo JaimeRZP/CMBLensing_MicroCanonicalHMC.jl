@@ -1,9 +1,10 @@
-function tune_what(sampler::EnsembleSampler)
+function tune_what(sampler::EnsembleSampler, target::ParallelTarget)
     tune_sigma, tune_eps, tune_L = false, false, false
 
     if sampler.hyperparameters.sigma == [0.0]
         @info "Tuning sigma ⏳"
         tune_sigma = true
+        sampler.hyperparameters.sigma = ones(target.target.d)
     end
 
     if sampler.hyperparameters.eps == 0.0
@@ -79,16 +80,14 @@ function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
     return  loss, (x, u, l, g, dE), (target.inv_transform(x), dE, -l)
 end
 
-function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state, sample; kwargs...)
+function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     varE_wanted = sett.varE_wanted
     d = target.target.d
 
     chains = zeros(sett.num_energy_points, sett.nchains, d+2)
-    X, E, L = sample
-    chains[1, :, :] = [X E L]
-    for i in 2:sett.num_energy_points
+    for i in 1:sett.num_energy_points
         state, sample = Step(sampler, target, state; kwargs...)
         X, E, L = sample
         chains[i, :, :] = [X E L]
@@ -106,9 +105,10 @@ function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state, samp
     no_divergences = isfinite(varE)
     ### update the hyperparameters ###
     if no_divergences
-        success = varE < varE_wanted #we are done
+        success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
-            sampler.hyperparameters.eps *= 0.5
+            new_log_eps = log(sampler.hyperparameters.eps)-0.5*(varE-varE_wanted)
+            sampler.hyperparameters.eps = exp(new_log_eps)
         end
     else
         success = false
@@ -132,10 +132,23 @@ function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init, burnin; 
     d = target.target.d
 
     @info "Burn-in started ⏳"
-    tune_sigma, tune_eps, tune_L = tune_what(sampler)
+    tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
 
     if tune_L
         tune_L!(sampler, target, init; kwargs...)
+    end
+
+    if tune_eps
+        for i in 1:sett.VarE_maxiter
+            if tune_eps!(sampler, target, init; kwargs...)
+                @info string("VarE condition met during eps tuning at step: ", i)
+                break
+            end
+            if i == sett.VarE_maxiter
+                @warn "Maximum number of steps reached during eps tuning"
+            end
+        end
+        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
     end
 
     loss, init, sample = Init_burnin(sampler, target, init; kwargs...)
@@ -172,19 +185,6 @@ function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init, burnin; 
 
     if tune_sigma
         @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
-    end
-
-    if tune_eps
-        for i in 1:sett.VarE_maxiter
-            if tune_eps!(sampler, target, init, sample; kwargs...)
-                @info string("VarE condition met during eps tuning at step: ", i)
-                break
-            end
-            if i == sett.VarE_maxiter
-                @warn "Maximum number of steps reached during eps tuning"
-            end
-        end
-        @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
     end
 
     tune_nu!(sampler, target)

@@ -159,7 +159,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
-    return step, [target.inv_transform(xx); dE + dEE; ll]
+    return step, [target.inv_transform(xx); dE + dEE; -ll]
 end
 
 

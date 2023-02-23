@@ -76,8 +76,8 @@ function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
     if no_divergences
         success = varE < varE_wanted #we are done
         if !success
-            #eps_new = eps*(varE_wanted/varE)^0.25 #assume var[E] ~ eps^4
-            sampler.hyperparameters.eps = 0.5 * eps
+            new_log_eps = log(sampler.hyperparameters.eps)-0.5*(varE-varE_wanted)
+            sampler.hyperparameters.eps = exp(new_log_eps)
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
         end
