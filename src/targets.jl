@@ -210,7 +210,6 @@ mutable struct StandardGaussianTarget <: Target
 end
 
 StandardGaussianTarget(; kwargs...) = begin
-
     d = kwargs[:d]
 
     function transform(x)
@@ -237,6 +236,85 @@ StandardGaussianTarget(; kwargs...) = begin
         x = 4*rand(key, MvNormal(mean, variance))
         xt = transform(x)
         return xt
+    end
+
+    StandardGaussianTarget(kwargs[:d],
+                           nlogp,
+                           grad_nlogp,
+                           transform,
+                           inv_transform,
+                           prior_draw)
+end
+
+mutable struct RosenbrockTarget <: Target
+    d::Int
+    nlogp::Function
+    grad_nlogp::Function
+    transform::Function
+    inv_transform::Function
+    prior_draw::Function
+end
+
+struct HybridRosenbrock{Tμ,Ta,Tb}
+    μ::Tμ
+    a::Ta
+    b::Tb
+end
+
+RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
+    kwargs = Dict(kwargs)
+    d = kwargs[:d]
+    D = HybridRosenbrock(Tμ, Ta, Tb)
+    σ0 = get(kwargs, :sigma, ones(d))
+
+    function ℓπ(θ)
+        n2, n1 = size(D.b)
+        n = length(θ)
+        X = reshape(@view(θ[2:end]), n1, n2)
+        y = -D.a*(θ[1] - D.μ)^2
+        for j in 1:n2
+            y -= D.b[j,1]*(X[j,1] - θ[1]^2)^2
+            for i in 2:n1
+                y -= D.b[j,i]*(X[j,i] - X[j,i-1]^2)^2
+            end
+        end
+        C = 0.5log(D.a) + 0.5sum(log.(D.b)) - n/2*log(pi)
+        y + C
+        return 0.5 * sum(θ.^2)
+    end
+
+    function transform(x)
+        xt = x.*σ0
+        return xt
+    end
+
+    function inv_transform(xt)
+        x = xt./σ0
+        return x
+    end
+
+    function nlogp(x)
+        xt = transform(x)
+        return -ℓπ(xt)
+    end
+
+    function grad_nlogp(x)
+        return ForwardDiff.gradient(nlogp, x)
+    end
+
+    function prior_draw(key)
+        #Is this already transformed
+        xt = zeros(length(D.b) + 1)
+        n2, n1 = size(D.b)
+        X = reshape(@view(xt[2:end]), n2, n1)
+        x[1] = D.μ + randn()/sqrt(2*D.a)
+        for j in 1:n2
+            X[j,1] = xt[1]^2 + randn()/sqrt(2D.b[j,1])
+            for i in 2:n1
+                X[j,i] = X[j,i-1]^2 + randn()/sqrt(2D.b[j,i])
+            end
+        end
+        return x
     end
 
     StandardGaussianTarget(kwargs[:d],
