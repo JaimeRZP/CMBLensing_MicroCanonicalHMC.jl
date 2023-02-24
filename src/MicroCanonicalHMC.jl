@@ -2,7 +2,7 @@ module MicroCanonicalHMC
 
 export Settings, Hyperparameters, MCHMC, Sample
 export Leapfrog, Minimal_norm
-export TuringTarget, StandardGaussianTarget, CustomTarget, ParallelTarget, CMBLensingTarget
+export TuringTarget, StandardGaussianTarget, CustomTarget, ParallelTarget, CMBLensingTarget, RosenbrockTarget
 
 using Interpolations, LinearAlgebra, Statistics, Distributions, Random, DataFrames
 using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
