@@ -14,6 +14,7 @@ include("sampler.jl")
 include("targets.jl")
 include("tuning.jl")
 include("integrators.jl")
+include("CMBLensing_utils.jl")
 
 include("ensemble/sampler.jl")
 include("ensemble/integrators.jl")

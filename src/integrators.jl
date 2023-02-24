@@ -11,7 +11,7 @@ function Leapfrog(target::Target,
                   x::AbstractVector, u::AbstractVector,
                   l::Number, g::AbstractVector)
     d = target.d
-    uu, dr1 = Update_momentum(target, eps * 0.5, g .* sigma, u)
+    uu, dr1 = Update_momentum(target, eps * 0.5, g * sigma, u)
 
     #full step in x
     z = x ./ sigma # go to the latent space
@@ -22,7 +22,7 @@ function Leapfrog(target::Target,
     gg .*= d/(d-1)
 
     #half step in momentum
-    uu, dr2 = Update_momentum(target, eps * 0.5, gg .* sigma, uu)
+    uu, dr2 = Update_momentum(target, eps * 0.5, gg * sigma, uu)
 
     kinetic_change = (dr1 + dr2) * target.d
 

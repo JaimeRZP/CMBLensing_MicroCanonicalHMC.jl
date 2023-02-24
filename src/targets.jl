@@ -98,21 +98,17 @@ mutable struct CMBLensingTarget <: Target
 end
 
 CMBLensingTarget(prob; kwargs...) = begin
-        d = length(prob.Ωstart)
+    d = length(prob.Ωstart)
     Λmass = real(prob.Λmass)
     sqrtΛmass = sqrt(Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
 
     function transform(x)
-        xt = x
-        #xt = CMBLensing.LenseBasis(inv_sqrtΛmass * x)
         xt = CMBLensing.LenseBasis(sqrtΛmass * x)
         return xt
     end
 
     function inv_transform(xt)
-        x = xt
-        #x = CMBLensing.LenseBasis(sqrtΛmass * xt)
         x = CMBLensing.LenseBasis(inv_sqrtΛmass * xt)
         return x
     end
@@ -134,7 +130,6 @@ CMBLensingTarget(prob; kwargs...) = begin
         x = prob.Ωstart
         xt = transform(x)
         return CMBLensing.LenseBasis(xt)
-        #return prob.Ωstart
     end
 
     CMBLensingTarget(d,

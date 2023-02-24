@@ -7,3 +7,11 @@ function Random_unit_vector(sampler::Sampler, target::CMBLensingTarget;
     end
     return u
 end
+
+function Partially_refresh_momentum(sampler::Sampler, target::CMBLensingTarget, u::AbstractVector)
+    """Adds a small noise to u and normalizes."""
+    nu = sampler.hyperparameters.nu
+    z = nu .* Random_unit_vector(sampler, target; normalize=false)
+    uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
+    return uu
+end

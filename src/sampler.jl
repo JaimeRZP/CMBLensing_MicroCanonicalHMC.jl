@@ -62,13 +62,13 @@ function MCHMC(eps, L; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
+function MCHMC(; kwargs...)
+    return MCHMC(0.0, 0.0; kwargs...)
+end
+
 function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
     """Generates a random (isotropic) unit vector."""
     return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
-end
-
-function MCHMC(; kwargs...)
-    return MCHMC(0.0, 0.0; kwargs...)
 end
 
 function Random_unit_vector(key, d; normalize = true)
@@ -149,8 +149,13 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     g .*= d/(d-1)
     u = Random_unit_vector(sampler, target) #random initial direction
 
-    sample = [target.inv_transform(x); 0.0; -l]
     state = (x, u, l, g, 0.0)
+
+    sample = Vector{Any}(undef,3)
+    sample[1] = target.inv_transform(x)
+    sample[2] = 0.0
+    sample[3] = -l
+
     return state, sample
 end
 
@@ -159,7 +164,13 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
-    return step, [target.inv_transform(xx); dE + dEE; ll]
+
+    sample = Vector{Any}(undef,3)
+    sample[1] = target.inv_transform(xx)
+    sample[2] =  dE + dEE
+    sample[3] = -ll
+
+    return step, sample
 end
 
 
