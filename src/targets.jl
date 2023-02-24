@@ -250,12 +250,13 @@ mutable struct RosenbrockTarget <: Target
     d::Int
     nlogp::Function
     grad_nlogp::Function
+    nlogp_grad_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
 end
 
-struct HybridRosenbrock{Tμ,Ta,Tb}
+struct Rosenbrock{Tμ,Ta,Tb}
     μ::Tμ
     a::Ta
     b::Tb
@@ -263,33 +264,29 @@ end
 
 RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
     kwargs = Dict(kwargs)
-    d = kwargs[:d]
     D = HybridRosenbrock(Tμ, Ta, Tb)
-    σ0 = get(kwargs, :sigma, ones(d))
+    d = kwargs[:d]
 
-    function ℓπ(θ)
-        n2, n1 = size(D.b)
-        n = length(θ)
-        X = reshape(@view(θ[2:end]), n1, n2)
-        y = -D.a*(θ[1] - D.μ)^2
-        for j in 1:n2
-            y -= D.b[j,1]*(X[j,1] - θ[1]^2)^2
-            for i in 2:n1
-                y -= D.b[j,i]*(X[j,i] - X[j,i-1]^2)^2
-            end
-        end
-        C = 0.5log(D.a) + 0.5sum(log.(D.b)) - n/2*log(pi)
-        y + C
-        return 0.5 * sum(θ.^2)
+    block = [1.0, D.μ; D.μ 1.0]
+    cov = BlockDiagonal([block for _ in 1:(d/2)])
+
+    function _mean(θ::AbstractVector)
+        i = 1:(d/2)
+        u = ones(length(θ))
+        u[2 .* i] .= θ[2 * i] ./ D.a
+        u[2 .* (i .+ 1)] .= D.a .* θ[2 * i ] .- D.b .* (θ[2 * i] ^ 2 + D.a ^ 2)
+        return u
     end
 
+    ℓπ(θ::AbstractVector) = logpdf(MvNormal(_mean(θ), cov), θ)
+
     function transform(x)
-        xt = x.*σ0
+        xt = x
         return xt
     end
 
     function inv_transform(xt)
-        x = xt./σ0
+        x = xt
         return x
     end
 
@@ -302,25 +299,22 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
         return ForwardDiff.gradient(nlogp, x)
     end
 
-    function prior_draw(key)
-        #Is this already transformed
-        xt = zeros(length(D.b) + 1)
-        n2, n1 = size(D.b)
-        X = reshape(@view(xt[2:end]), n2, n1)
-        x[1] = D.μ + randn()/sqrt(2*D.a)
-        for j in 1:n2
-            X[j,1] = xt[1]^2 + randn()/sqrt(2D.b[j,1])
-            for i in 2:n1
-                X[j,i] = X[j,i-1]^2 + randn()/sqrt(2D.b[j,i])
-            end
-        end
-        return x
+    function nlogp_grad_nlogp(x)
+        l = nlogp(x)
+        g = grad_nlogp(x)
+        return l, g
     end
 
-    StandardGaussianTarget(kwargs[:d],
-                           nlogp,
-                           grad_nlogp,
-                           transform,
-                           inv_transform,
-                           prior_draw)
+    function prior_draw(key)
+        xt = MvNormal(zeros(d), ones(d))
+        return xt
+    end
+
+    RosenbrockTarget(d,
+    nlogp,
+    grad_nlogp,
+    nlogp_grad_nlogp,
+    transform,
+    inv_transform,
+    prior_draw)
 end

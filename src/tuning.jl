@@ -151,7 +151,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     end
 
     if tune_eps
-        sampler.hyperparameters.eps = 0.5
         for i in 1:sett.tune_maxiter
             if tune_eps!(sampler, target, init; kwargs...)
                 break
