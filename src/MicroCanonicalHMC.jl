@@ -2,7 +2,8 @@ module MicroCanonicalHMC
 
 export Settings, Hyperparameters, MCHMC, Sample
 export Leapfrog, Minimal_norm
-export TuringTarget, StandardGaussianTarget, CustomTarget, ParallelTarget, CMBLensingTarget, RosenbrockTarget
+export TuringTarget, GaussianTarget, RosenbrockTarget, CustomTarget
+export ParallelTarget
 
 using Interpolations, LinearAlgebra, Statistics, Random, DataFrames
 using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
@@ -13,11 +14,12 @@ abstract type Target <: AbstractMCMC.AbstractModel end
 
 include("sampler.jl")
 include("targets.jl")
-include("tuning.jl")
 include("integrators.jl")
+include("tuning.jl")
 include("abstractmcmc.jl")
 
 include("ensemble/sampler.jl")
+include("ensemble/targets.jl")
 include("ensemble/integrators.jl")
 include("ensemble/tuning.jl")
 include("ensemble/abstractmcmc.jl")
