@@ -87,77 +87,6 @@ TuringTarget(model; compute_MAP=true, kwargs...) = begin
                MAP_t)
 end
 
-mutable struct ParallelTarget <: Target
-    target::Target
-    nlogp::Function
-    grad_nlogp::Function
-    nlogp_grad_nlogp::Function
-    transform::Function
-    inv_transform::Function
-    prior_draw::Function
-end
-
-ParallelTarget(target::Target, nchains) = begin
-    d = target.d
-    function transform(xs)
-        xs_t = Matrix{Real}(undef, nchains, d)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            xs_t[i, :] .= target.transform(xs[i, :])
-        end
-        return xs_t
-    end
-
-    function inv_transform(xs_t)
-        xs = Matrix{Real}(undef, nchains, d)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            xs[i, :] .= target.inv_transform(xs_t[i, :])
-        end
-        return xs
-    end
-
-    function nlogp(xs_t)
-        ls = Vector{Real}(undef, nchains)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            ls[i] = target.nlogp(xs_t[i, :])
-        end
-        return ls
-    end
-
-    function grad_nlogp(xs_t)
-        gs = Matrix{Real}(undef, nchains, d)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            gs[i, :] .= target.grad_nlogp(xs_t[i, :])
-        end
-        return gs
-    end
-
-    function nlogp_grad_nlogp(xs_t)
-        ls = Vector{Real}(undef, nchains)
-        gs = Matrix{Real}(undef, nchains, d)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            ls[i], = target.nlogp(xs_t[i, :])
-            gs[i, :] = target.grad_nlogp(xs_t[i, :])
-        end
-        return ls , gs
-    end
-
-    function prior_draw(key)
-        xs_t = Matrix{Real}(undef, nchains, d)
-        @inbounds Threads.@threads :static for i in 1:nchains
-            xs_t[i, :] .= target.prior_draw(key)
-        end
-        return xs_t
-    end
-
-    ParallelTarget(
-        target,
-        nlogp,
-        grad_nlogp,
-        nlogp_grad_nlogp,
-        transform,
-        inv_transform,
-        prior_draw)
-end
 
 mutable struct CustomTarget <: Target
     d::Int
@@ -200,7 +129,7 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
                prior_draw)
 end
 
-mutable struct StandardGaussianTarget <: Target
+mutable struct GaussianTarget <: Target
     d::Int
     nlogp::Function
     grad_nlogp::Function
@@ -209,8 +138,11 @@ mutable struct StandardGaussianTarget <: Target
     prior_draw::Function
 end
 
-StandardGaussianTarget(; kwargs...) = begin
-    d = kwargs[:d]
+GaussianTarget(_mean ,_cov) = begin
+    d = length(mean)
+    _guassian = MvNormal(_mean, _cov)
+    ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
+    ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
 
     function transform(x)
         xt = x
@@ -223,27 +155,33 @@ StandardGaussianTarget(; kwargs...) = begin
     end
 
     function nlogp(x)
-        return 0.5 * sum(x.^2)
+        xt = transform(x)
+        return -ℓπ(xt)
     end
 
     function grad_nlogp(x)
-        return ForwardDiff.gradient(nlogp, x)
+        xt = transform(x)
+        return -∂lπ∂θ(xt)
+    end
+
+    function nlogp_grad_nlogp(x)
+        l = nlogp(x)
+        g = grad_nlogp(x)
+        return l, g
     end
 
     function prior_draw(key)
-        mean = zeros(d)
-        variance = ones(d)
-        x = 4*rand(key, MvNormal(mean, variance))
-        xt = transform(x)
+        xt = rand(MvNormal(zeros(d), ones(d)))
         return xt
     end
 
-    StandardGaussianTarget(kwargs[:d],
-                           nlogp,
-                           grad_nlogp,
-                           transform,
-                           inv_transform,
-                           prior_draw)
+    GaussianTarget(d,
+    nlogp,
+    grad_nlogp,
+    nlogp_grad_nlogp,
+    transform,
+    inv_transform,
+    prior_draw)
 end
 
 mutable struct RosenbrockTarget <: Target
