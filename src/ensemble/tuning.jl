@@ -93,7 +93,7 @@ function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
     return  loss, (x, u, l, g, dE), (target.inv_transform(x), dE, -l)
 end
 
-function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
+function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; α=1, kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     varE_wanted = sett.varE_wanted
@@ -120,7 +120,7 @@ function tune_eps!(sampler::EnsembleSampler, target::ParallelTarget, state; kwar
     if no_divergences
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.1
         if !success
-            new_log_eps = log(sampler.hyperparameters.eps)-(varE-varE_wanted)
+            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
             sampler.hyperparameters.eps = exp(new_log_eps)
         end
     else
@@ -154,7 +154,8 @@ function Burnin(sampler::EnsembleSampler, target::ParallelTarget, init, burnin; 
     if tune_eps
         sampler.settings.varE_wanted *= 10
         for i in 1:sett.VarE_maxiter
-            if tune_eps!(sampler, target, init; kwargs...)
+            α = exp.(-(i .- 1)/20)
+            if tune_eps!(sampler, target, init; α=α, kwargs...)
                 @info string("VarE condition met during eps tuning at step: ", i)
                 break
             end

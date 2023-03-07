@@ -87,7 +87,7 @@ function tune_sigma!(sampler::Sampler, target::Target; kwargs...)
     @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
 end
 
-function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
+function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     eps = sampler.hyperparameters.eps
@@ -114,7 +114,8 @@ function tune_eps!(sampler::Sampler, target::Target, init; kwargs...)
     if no_divergences
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
-            new_log_eps = log(sampler.hyperparameters.eps)-(varE-varE_wanted)
+
+            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
@@ -152,7 +153,8 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
 
     if tune_eps
         for i in 1:sett.tune_maxiter
-            if tune_eps!(sampler, target, init; kwargs...)
+            α = exp.(-(i .- 1)/20)
+            if tune_eps!(sampler, target, init; α=α, kwargs...)
                 break
             end
         end
