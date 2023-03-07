@@ -185,6 +185,53 @@ GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
     prior_draw)
 end
 
+GaussianMixtureTarget(_means::AbstractVector ,_covs::AbstractVector) = begin
+    d = length(_means[1])
+    for (_mean, _cov) in zip(_means, _covs)
+    _gaussian = MvNormal(_mean, _cov)
+    ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
+    ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
+
+    function transform(x)
+        xt = x
+        return xt
+    end
+
+    function inv_transform(xt)
+        x = xt
+        return x
+    end
+
+    function nlogp(x)
+        xt = transform(x)
+        return -ℓπ(xt)
+    end
+
+    function grad_nlogp(x)
+        xt = transform(x)
+        return -∂lπ∂θ(xt)
+    end
+
+    function nlogp_grad_nlogp(x)
+        l = nlogp(x)
+        g = grad_nlogp(x)
+        return l, g
+    end
+
+    function prior_draw(key)
+        xt = rand(MvNormal(zeros(d), ones(d)))
+        return xt
+    end
+
+    GaussianTarget(d,
+    nlogp,
+    grad_nlogp,
+    nlogp_grad_nlogp,
+    transform,
+    inv_transform,
+    prior_draw)
+end
+
 mutable struct RosenbrockTarget <: Target
     d::Int
     nlogp::Function
@@ -207,7 +254,7 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
     d = kwargs[:d]
 
     block = [1.0 D.μ; D.μ 1.0]
-    cov = BlockDiagonal([block for _ in 1:(d/2)])
+    _cov = BlockDiagonal([block for _ in 1:(d/2)])
 
     function _mean(θ::AbstractVector)
         i = floor.(Int,(1:(d/2)))
@@ -219,7 +266,7 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
         return u
     end
 
-    rosenbrock(θ::AbstractVector) = MvNormal(_mean(θ), cov)
+    rosenbrock(θ::AbstractVector) = MvNormal(_mean(θ), _cov)
     ℓπ(θ::AbstractVector) = logpdf(rosenbrock(θ), θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(rosenbrock(θ), θ)
 
