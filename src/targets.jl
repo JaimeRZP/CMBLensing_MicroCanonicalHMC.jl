@@ -133,14 +133,15 @@ mutable struct GaussianTarget <: Target
     d::Int
     nlogp::Function
     grad_nlogp::Function
+    nlogp_grad_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
 end
 
-GaussianTarget(_mean ,_cov) = begin
-    d = length(mean)
-    _guassian = MvNormal(_mean, _cov)
+GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
+    d = length(_mean)
+    _gaussian = MvNormal(_mean, _cov)
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
 
@@ -260,4 +261,62 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
     transform,
     inv_transform,
     prior_draw)
+end
+
+mutable struct NealFunnelTarget <: Target
+    model::DynamicPPL.Model
+    d::Int
+    nlogp::Function
+    grad_nlogp::Function
+    nlogp_grad_nlogp::Function
+    transform::Function
+    inv_transform::Function
+    prior_draw::Function
+end
+
+NealFunnelTarget(model; d=0, kwargs...) = begin
+    ctxt = model.context
+    vi = DynamicPPL.VarInfo(model, ctxt)
+
+    ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi, model, ctxt))
+    ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
+    ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
+
+    function nlogp(xt)
+        return -ℓπ(xt)
+    end
+
+    function grad_nlogp(xt)
+        return ForwardDiff.gradient(nlogp, xt)
+    end
+
+    function nlogp_grad_nlogp(xt)
+        return -1 .* ∂lπ∂θ(xt)
+    end
+
+    function prior_draw(key)
+        ctxt = model.context
+        vi = DynamicPPL.VarInfo(model, ctxt)
+        return vi[DynamicPPL.SampleFromPrior()]
+    end
+
+    function transform(x)
+        xt = x
+        return xt
+    end
+
+    function inv_transform(xt)
+        x = xt
+        return x
+    end
+
+    NealFunnelTarget(
+               model,
+               d,
+               nlogp,
+               grad_nlogp,
+               nlogp_grad_nlogp,
+               transform,
+               inv_transform,
+               prior_draw)
 end

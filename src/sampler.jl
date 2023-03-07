@@ -173,7 +173,8 @@ function Sample(sampler::Sampler, target::Target,
                 num_steps::Int; kwargs...)
     """Args:
            num_steps: number of integration steps to take.
-           x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
+           x_initial: initial condition for x (an array of shape (target dimension, )).
+                      It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
            random_key: jax radnom seed, e.g. jax.random.PRNGKey(42).
         Returns:
             samples (shape = (num_steps, self.Target.d))
