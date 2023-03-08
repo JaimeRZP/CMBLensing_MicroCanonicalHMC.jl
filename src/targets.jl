@@ -19,26 +19,54 @@ function _get_dists(vi)
     return [md.dists[1] for md in mds]
 end
 
+function _name_variables(vi, dist_lengths)
+    vsyms = keys(vi)
+    names = []
+    for (vsym, dist_length) in zip(vsyms, dist_lengths)
+        if dist_length==1
+            name = [vsym]
+            append!(names, name)
+        else
+            name = [DynamicPPL.VarName(Symbol(vsym, i,)) for i in 1:dist_length]
+            append!(names, name)
+         end
+    end
+    return names
+end
+
 TuringTarget(model; compute_MAP=true, kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
     vi_t = Turing.link!!(vi, model)
     dists = _get_dists(vi)
-    vsyms = keys(vi)
+    dist_lengths = [length(dist) for dist in dists]
+    vsyms = _name_variables(vi, dist_lengths)
     d = length(vsyms)
 
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
     ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
     ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
 
+    function _reshape_params(x::AbstractVector)
+        xx = []
+        idx = 0
+        for dist_length in dist_lengths
+            append!(xx, [x[idx+1:idx+dist_length]])
+            idx += dist_length
+        end
+        return xx
+    end
+
     function transform(x)
+        x = _reshape_params(x)
         xt = [Bijectors.link(dist, par) for (dist, par) in zip(dists, x)]
-        return xt
+        return vcat(xt...)
     end
 
     function inv_transform(xt)
+        xt = _reshape_params(xt)
         x = [Bijectors.invlink(dist, par) for (dist, par) in zip(dists, xt)]
-        return x
+        return vcat(x...)
     end
 
     function nlogp(xt)
@@ -141,53 +169,6 @@ end
 
 GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
     d = length(_mean)
-    _gaussian = MvNormal(_mean, _cov)
-    ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
-    ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
-
-    function transform(x)
-        xt = x
-        return xt
-    end
-
-    function inv_transform(xt)
-        x = xt
-        return x
-    end
-
-    function nlogp(x)
-        xt = transform(x)
-        return -ℓπ(xt)
-    end
-
-    function grad_nlogp(x)
-        xt = transform(x)
-        return -∂lπ∂θ(xt)
-    end
-
-    function nlogp_grad_nlogp(x)
-        l = nlogp(x)
-        g = grad_nlogp(x)
-        return l, g
-    end
-
-    function prior_draw(key)
-        xt = rand(MvNormal(zeros(d), ones(d)))
-        return xt
-    end
-
-    GaussianTarget(d,
-    nlogp,
-    grad_nlogp,
-    nlogp_grad_nlogp,
-    transform,
-    inv_transform,
-    prior_draw)
-end
-
-GaussianMixtureTarget(_means::AbstractVector ,_covs::AbstractVector) = begin
-    d = length(_means[1])
-    for (_mean, _cov) in zip(_means, _covs)
     _gaussian = MvNormal(_mean, _cov)
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
