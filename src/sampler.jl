@@ -170,7 +170,7 @@ end
 
 
 function Sample(sampler::Sampler, target::Target,
-                num_steps::Int; kwargs...)
+                num_steps::Int; file_name="samples.txt", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -189,9 +189,13 @@ function Sample(sampler::Sampler, target::Target,
 
     samples = []
     push!(samples, sample)
-    for i in 1:num_steps
-        state, sample = Step(sampler, target, state; kwargs...)
-        push!(samples, sample)
+    io = open(file_name, "w") do io
+        println(io, sample)
+        for i in 1:num_steps
+            state, sample = Step(sampler, target, state; kwargs...)
+            push!(samples, sample)
+            println(io, sample)
+        end
     end
 
     return samples
