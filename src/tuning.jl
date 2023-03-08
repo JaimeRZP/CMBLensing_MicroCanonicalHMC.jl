@@ -10,6 +10,8 @@ function tune_what(sampler::Sampler, target::Target)
             init_sigma = sampler.settings.init_sigma
         end
         sampler.hyperparameters.sigma = init_sigma
+    else
+        @info "Using given sigma ✅"
     end
 
     if sampler.hyperparameters.eps == 0.0
@@ -21,6 +23,8 @@ function tune_what(sampler::Sampler, target::Target)
             init_eps = sampler.settings.init_eps
         end
         sampler.hyperparameters.eps = init_eps
+    else
+        @info "Using given eps ✅"
     end
 
     if sampler.hyperparameters.L == 0.0
@@ -32,6 +36,8 @@ function tune_what(sampler::Sampler, target::Target)
             init_L = sampler.settings.init_L
         end
         sampler.hyperparameters.L = init_L
+    else
+        @info "Using given L ✅"
     end
 
     return tune_sigma, tune_eps, tune_L
