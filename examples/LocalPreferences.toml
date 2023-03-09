@@ -1,0 +1,2 @@
+[CMBLensing]
+precompile = "(:P,), (Float32,), (Array,)"
