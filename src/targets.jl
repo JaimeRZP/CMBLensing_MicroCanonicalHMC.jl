@@ -34,7 +34,7 @@ function _name_variables(vi, dist_lengths)
     return names
 end
 
-TuringTarget(model; compute_MAP=true, kwargs...) = begin
+TuringTarget(model; compute_MAP=false, kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
     vi_t = Turing.link!!(vi, model)
