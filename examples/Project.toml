@@ -2,6 +2,7 @@
 CMBLensing = "b60c06c0-7e54-11e8-3788-4bd722d65317"
 CMBLensingInferenceTestProblem = "77eb751d-b138-43db-8fbb-26307a053bc2"
 CUDA = "052768ef-5323-5732-b1bb-66c8b64840ba"
+IJulia = "7073ff75-c697-5162-941a-fcdaad2a7d2a"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 MCMCDiagnosticTools = "be115224-59cd-429b-ad48-344e309966f0"
 MicroCanonicalHMC = "234d2aa0-2291-45f7-9047-6fa6f316b0a8"

@@ -22,6 +22,9 @@ mutable struct Settings
     tune_samples::Int
     tune_maxiter::Int
     integrator::String
+    init_eps
+    init_L
+    init_sigma
 end
 
 Settings(;kwargs...) = begin
@@ -30,12 +33,15 @@ Settings(;kwargs...) = begin
     key = MersenneTwister(seed)
     varE_wanted = get(kwargs, :varE_wanted, 0.2)
     burn_in = get(kwargs, :burn_in, 0)
-    tune_samples = get(kwargs, :tune_samples, 1000)
+    tune_samples = get(kwargs, :tune_samples, 20)
     tune_maxiter = get(kwargs, :tune_maxiter, 10)
     integrator = get(kwargs, :integrator, "LF")
+    init_eps = get(kwargs, :init_eps, nothing)
+    init_L = get(kwargs, :init_L, nothing)
+    init_sigma = get(kwargs, :init_sigma, nothing)
     Settings(key,
              varE_wanted, burn_in, tune_samples, tune_maxiter,
-             integrator)
+             integrator, init_eps, init_L, init_sigma)
 end
 
 struct Sampler
@@ -151,12 +157,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
 
     state = (x, u, l, g, 0.0)
 
-    sample = Vector{Any}(undef,3)
-    sample[1] = target.inv_transform(x)
-    sample[2] = 0.0
-    sample[3] = -l
-
-    return state, sample
+    return state, [target.inv_transform(x)[:]; 0.0; -l]
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
@@ -165,20 +166,16 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
 
-    sample = Vector{Any}(undef,3)
-    sample[1] = target.inv_transform(xx)
-    sample[2] =  dE + dEE
-    sample[3] = -ll
-
-    return step, sample
+    return step, [target.inv_transform(xx)[:]; dE + dEE; -ll]
 end
 
 
-function Sample(sampler::Sampler, target::Target,
-                num_steps::Int; kwargs...)
+function Sample(sampler::Sampler, target::Target, num_steps::Int;
+                file_name="samples", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
-           x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
+           x_initial: initial condition for x (an array of shape (target dimension, )).
+                      It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
            random_key: jax radnom seed, e.g. jax.random.PRNGKey(42).
         Returns:
             samples (shape = (num_steps, self.Target.d))
@@ -193,9 +190,13 @@ function Sample(sampler::Sampler, target::Target,
 
     samples = []
     push!(samples, sample)
-    for i in 1:num_steps
-        state, sample = Step(sampler, target, state; kwargs...)
-        push!(samples, sample)
+    io = open(string(file_name, ".txt"), "w") do io
+        println(io, sample)
+        for i in 1:num_steps
+            state, sample = Step(sampler, target, state; kwargs...)
+            push!(samples, sample)
+            println(io, sample)
+        end
     end
 
     return samples
