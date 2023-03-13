@@ -110,12 +110,17 @@ function Update_momentum(d::Number, eff_eps::Number,
     g_norm = sqrt(sum(g .^2 ))
     e = - g ./ g_norm
     ue = dot(u, e)
-    sh = sinh(eff_eps * g_norm / d)
-    ch = cosh(eff_eps * g_norm / d)
-    th = tanh(eff_eps * g_norm / d)
-    delta_r = log(ch) + log1p(ue * th)
-
-    uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
+    if (g_norm / d) < (2/sqrt(d))
+        sh = sinh(eff_eps * g_norm / d)
+        ch = cosh(eff_eps * g_norm / d)
+        th = tanh(eff_eps * g_norm / d)
+        delta_r = log(ch) + log1p(ue * th)
+        uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
+    else
+        uu = u .+ e .* ue
+        th = tanh(eff_eps * g_norm / d)
+        delta_r = ((eff_eps * g_norm / d) - log(2)) + log1p(ue * th)
+    end
 
     return uu, delta_r
 end
