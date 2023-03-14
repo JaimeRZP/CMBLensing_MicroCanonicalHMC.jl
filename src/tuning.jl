@@ -18,7 +18,7 @@ function tune_what(sampler::Sampler, target::Target)
         @info "Tuning eps ⏳"
         tune_eps = true
         if sampler.settings.init_eps == nothing
-            init_eps = 0.5
+            init_eps = 0.5#*sqt(d)
         else
             init_eps = sampler.settings.init_eps
         end
@@ -40,20 +40,18 @@ function tune_what(sampler::Sampler, target::Target)
         @info "Using given L ✅"
     end
 
+    tune_nu!(sampler, target)
+
     return tune_sigma, tune_eps, tune_L
 end
 
-function ess_corr(target::Target, samples)
-    param_names = target.vsyms
-    internal_names = [:E, :logp]
-    names = [param_names; internal_names]
-    samples = MCMCChains.concretize(samples)
-    chain = MCMCChains.Chains(samples, names, (internals = internal_names,))
-    stats = summarize(chain)
-    esss = stats[:, :ess]  # effective sample size in each dimension
+function ess_corr(samples)
+    _samples = zeros(length(samples), length(samples[1]), 1)
+    _samples[:, :, 1] = mapreduce(permutedims, vcat, samples)
+    _samples = permutedims(_samples, (1,3,2))
+    ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
 
-    ### my part (combine all dimensions): ###
-    neff = esss ./ length(samples)
+    neff = ess ./ length(samples)
     return 1.0 / mean(1 ./ neff)
 end
 
@@ -70,7 +68,7 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
             init, sample = Step(sampler, target, init; monitor_energy=true)
             push!(samples, sample)
         end
-        ESS = ess_corr(target, samples)
+        ESS = ess_corr(samples)
         if dialog
             println(string("samples: ", length(samples), "--> ESS: ", ESS))
         end
@@ -120,8 +118,8 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
     if no_divergences
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
-
             new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
+            new_log_eps = min(0.00005, new_log_eps)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
