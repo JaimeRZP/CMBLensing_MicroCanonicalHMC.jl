@@ -7,7 +7,7 @@ export ParallelTarget
 
 using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff, Distributed
-using CMBLensing, Zygote
+using CMBLensing, Zygote, MCMCDiagnosticTools
 
 abstract type Target end
 
