@@ -17,7 +17,7 @@ end
 
 mutable struct Settings
     key::MersenneTwister
-    varE_wanted::Float64
+    varE_wanted::Float64 #VarE per dim
     burn_in::Int
     tune_samples::Int
     tune_maxiter::Int
@@ -108,21 +108,23 @@ end
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
     g_norm = sqrt(sum(g .^2 ))
-    e = - g ./ g_norm
-    ue = dot(u, e)
-    if (g_norm / d) < (2/sqrt(d))
-        sh = sinh(eff_eps * g_norm / d)
-        ch = cosh(eff_eps * g_norm / d)
-        th = tanh(eff_eps * g_norm / d)
-        delta_r = log(ch) + log1p(ue * th)
-        uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
-    else
+    delta = eff_eps * g_norm / (d-1)
+    if delta > 1
+        @warn string("Divergence encountered g_norm/d : ", g_norm / d)
+        e = - g ./ g_norm
+        ue = dot(u, e)
         uu = u .+ e .* ue
         th = tanh(eff_eps * g_norm / d)
         delta_r = ((eff_eps * g_norm / d) - log(2)) + log1p(ue * th)
+    else
+        e = - g ./ g_norm
+        ue = dot(u, e)
+        zeta = exp(-delta)
+        uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
+        delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)
     end
 
-    return uu, delta_r
+    return  uu ./ sqrt(sum(uu.^2)), delta_r
 end
 
 function Dynamics(sampler::Sampler, target::Target, state)
@@ -162,7 +164,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
 
     state = (x, u, l, g, 0.0)
 
-    return state, [target.inv_transform(x)[:]; 0.0; -l]
+    return state, [target.inv_transform(x)[:]; g[:]; 0.0; -l]
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
@@ -171,7 +173,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
 
-    return step, [target.inv_transform(xx)[:]; dE + dEE; -ll]
+    return step, [target.inv_transform(xx)[:]; gg[:]; dE + dEE; -ll]
 end
 
 

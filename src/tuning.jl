@@ -18,7 +18,7 @@ function tune_what(sampler::Sampler, target::Target)
         @info "Tuning eps ⏳"
         tune_eps = true
         if sampler.settings.init_eps == nothing
-            init_eps = 0.5
+            init_eps = 0.5*sqrt(target.d)
         else
             init_eps = sampler.settings.init_eps
         end
@@ -40,14 +40,45 @@ function tune_what(sampler::Sampler, target::Target)
         @info "Using given L ✅"
     end
 
+    sampler.hyperparameters.nu = eval_nu(sampler.hyperparameters.eps,
+                                         sampler.hyperparameters.L,
+                                         target.d)
+
     return tune_sigma, tune_eps, tune_L
 end
 
+function ess_corr(samples)
+    _samples = zeros(length(samples), length(samples[1]), 1)
+    _samples[:, :, 1] = mapreduce(permutedims, vcat, samples)
+    _samples = permutedims(_samples, (1,3,2))
+    ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
+
+    neff = ess ./ length(samples)
+    return 1.0 / mean(1 ./ neff)
+end
+
 function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
-    @warn "L-tuning not Implemented using L = sqrt(target.d)"
-    d = target.d
-    sampler.hyperparameters.L = sqrt(d)
-    @info string("Found L: ", sampler.hyperparameters.L, " ✅")
+    dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    eps = sampler.hyperparameters.eps
+    steps = 10 .^ (LinRange(2, log10(2500), sett.tune_maxiter))
+    steps = Int.(round.(steps))
+    samples = []
+    for s in steps
+        for i in 1:s
+            init, sample = Step(sampler, target, init; monitor_energy=true)
+            push!(samples, sample)
+        end
+        ESS = ess_corr(samples)
+        if dialog
+            println(string("samples: ", length(samples), "--> ESS: ", ESS))
+        end
+        if length(samples) > 10.0 / ESS
+            sampler.hyperparameters.L = 0.4 * eps / ESS # = 0.4 * correlation length
+            @info string("Found L: ", sampler.hyperparameters.L, " ✅")
+            break
+        end
+    end
 end
 
 function tune_sigma!(sampler::Sampler, target::Target; kwargs...)
@@ -85,6 +116,8 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
             new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
+            new_log_eps = min(0.00005, new_log_eps) #Adds a floor
+            new_log_eps = min(new_log_eps, d)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
