@@ -1071,7 +1071,7 @@ uuid = "c03570c3-d221-55d1-a50c-7939bbd78826"
 version = "0.4.4"
 
 [[deps.MicroCanonicalHMC]]
-deps = ["CMBLensing", "CMBLensingInferenceTestProblem", "Distributed", "Distributions", "ForwardDiff", "Interpolations", "LinearAlgebra", "Random", "Statistics", "Zygote"]
+deps = ["CMBLensing", "CMBLensingInferenceTestProblem", "Distributed", "Distributions", "ForwardDiff", "Interpolations", "LinearAlgebra", "MCMCDiagnosticTools", "Random", "Statistics", "Zygote"]
 path = ".."
 uuid = "234d2aa0-2291-45f7-9047-6fa6f316b0a8"
 version = "0.1.0"

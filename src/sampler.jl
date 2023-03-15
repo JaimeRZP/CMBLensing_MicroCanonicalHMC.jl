@@ -72,27 +72,27 @@ function MCHMC(; kwargs...)
     return MCHMC(0.0, 0.0; kwargs...)
 end
 
-function Random_unit_vector(sampler::Sampler, target::Target; normalize=true)
+function Random_unit_vector(sampler::Sampler, target::Target)
     """Generates a random (isotropic) unit vector."""
-    return Random_unit_vector(sampler.settings.key, target.d; normalize=normalize)
+    return Random_unit_vector(sampler.settings.key, target.d)
 end
 
-function Random_unit_vector(key, d; normalize = true)
+function Random_unit_vector(key, d)
     u = randn(key, d)
-    if normalize
-        u ./= sqrt(sum(u.^2))
-    end
+    u ./= sqrt(sum(u.^2))
     return u
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
-    return Partially_refresh_momentum(sampler.hyperparameters.nu, sampler.settings.key,
-                                      target.d, u; normalize = false)
+    return Partially_refresh_momentum(sampler.hyperparameters.nu,
+                                      sampler.settings.key,
+                                      target.d,
+                                      u)
 end
 
-function Partially_refresh_momentum(nu, key, d, u::AbstractVector; normalize = false)
-    z = nu .* Random_unit_vector(key, d; normalize=normalize)
+function Partially_refresh_momentum(nu, key, d, u::AbstractVector)
+    z = nu .* Random_unit_vector(key, d)
     uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end
@@ -109,13 +109,22 @@ function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
     g_norm = sqrt(sum(g .^2 ))
     e = - g ./ g_norm
+    delta = eff_eps * g_norm / (d-1)
     ue = dot(u, e)
-    sh = sinh(eff_eps * g_norm / d)
-    ch = cosh(eff_eps * g_norm / d)
-    th = tanh(eff_eps * g_norm / d)
-    delta_r = log(ch) + log1p(ue * th)
 
+    #=
+    sh = sinh(delta)
+    ch = cosh(delta)
+    th = tanh(delta)
     uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
+    uu ./= sqrt(sum(uu.^2))
+    delta_r = log(ch) + log1p(ue * th)
+    =#
+
+    zeta = exp(-delta)
+    uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
+    uu ./= sqrt(sum(uu.^2))
+    delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)
 
     return uu, delta_r
 end

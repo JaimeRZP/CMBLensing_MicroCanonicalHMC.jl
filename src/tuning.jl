@@ -106,7 +106,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
     E = samples[:, end-1]
     varE = std(E)^2 / target.d #variance per dimension
     if dialog
-        println("eps: ", eps, " --> VarE: ", varE)
+        println("eps: ", eps, " --> VarE/d: ", varE)
     end
     no_divergences = isfinite(varE)
 
