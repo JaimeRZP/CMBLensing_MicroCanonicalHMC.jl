@@ -108,7 +108,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
 
     samples = mapreduce(permutedims, vcat, samples)
     E = samples[:, end-1]
-    varE = std(E)^2 / target.d #variance per dimension
+    varE = std(E) / target.d #variance per dimension
     if dialog
         println("eps: ", eps, " --> VarE/d: ", varE)
     end
@@ -119,7 +119,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
             new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
-            new_log_eps = min(0.00005, new_log_eps)
+            new_log_eps = max(log(0.00005), new_log_eps)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
