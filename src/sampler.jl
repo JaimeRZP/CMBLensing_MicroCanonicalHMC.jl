@@ -166,7 +166,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
 
     state = (x, u, l, g, 0.0)
 
-    return state, [target.inv_transform(x)[:]; 0.0; -l]
+    return state, [target.inv_transform(x)[:]; g[:]; 0.0; -l]
 end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
@@ -175,7 +175,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
 
-    return step, [target.inv_transform(xx)[:]; dE + dEE; -ll]
+    return step, [target.inv_transform(xx)[:]; gg[:]; dEE; -ll]
 end
 
 
