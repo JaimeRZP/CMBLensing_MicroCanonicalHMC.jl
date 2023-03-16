@@ -108,7 +108,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
 
     samples = mapreduce(permutedims, vcat, samples)
     E = samples[:, end-1]
-    varE = std(E) / target.d #variance per dimension
+    varE = std(E)^2 / target.d #variance per dimension
     if dialog
         println("eps: ", eps, " --> VarE/d: ", varE)
     end
