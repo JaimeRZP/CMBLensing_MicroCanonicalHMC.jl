@@ -1,0 +1,11 @@
+prefix=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env
+exec_prefix=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env
+libdir=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/lib
+includedir=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/include
+
+Name: uuid
+Description: Universally unique id library
+Version: 2.32.1
+Requires:
+Cflags: -I${includedir}/uuid
+Libs: -L${libdir} -luuid

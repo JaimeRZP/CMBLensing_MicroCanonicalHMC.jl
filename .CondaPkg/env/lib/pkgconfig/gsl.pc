@@ -1,0 +1,11 @@
+prefix=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env
+exec_prefix=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env
+libdir=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/lib
+includedir=/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/include
+GSL_CBLAS_LIB=-lgslcblas
+
+Name: GSL
+Description: GNU Scientific Library
+Version: 2.7
+Libs: -L/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/lib -lgsl ${GSL_CBLAS_LIB} -lm -lcblas -lm
+Cflags: -I/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/include

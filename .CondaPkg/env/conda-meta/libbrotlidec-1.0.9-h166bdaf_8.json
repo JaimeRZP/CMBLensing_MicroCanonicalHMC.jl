@@ -1,0 +1,68 @@
+{
+    "arch": "x86_64",
+    "build": "h166bdaf_8",
+    "build_number": 8,
+    "build_string": "h166bdaf_8",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [],
+    "depends": [
+        "libbrotlicommon 1.0.9 h166bdaf_8",
+        "libgcc-ng >=12"
+    ],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libbrotlidec-1.0.9-h166bdaf_8",
+    "files": [
+        "lib/libbrotlidec.so",
+        "lib/libbrotlidec.so.1",
+        "lib/libbrotlidec.so.1.0.9",
+        "lib/pkgconfig/libbrotlidec.pc"
+    ],
+    "fn": "libbrotlidec-1.0.9-h166bdaf_8.tar.bz2",
+    "license": "MIT",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libbrotlidec-1.0.9-h166bdaf_8",
+        "type": 1
+    },
+    "md5": "4ae4d7795d33e02bd20f6b23d91caf82",
+    "name": "libbrotlidec",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libbrotlidec-1.0.9-h166bdaf_8.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "lib/libbrotlidec.so",
+                "path_type": "softlink",
+                "sha256_in_prefix": "b2436f964b0f7eedaf2ee5449f96881526cb4aad4014e0a2a7742cd65e0c9809",
+                "size_in_bytes": 55296
+            },
+            {
+                "_path": "lib/libbrotlidec.so.1",
+                "path_type": "softlink",
+                "sha256_in_prefix": "b2436f964b0f7eedaf2ee5449f96881526cb4aad4014e0a2a7742cd65e0c9809",
+                "size_in_bytes": 55296
+            },
+            {
+                "_path": "lib/libbrotlidec.so.1.0.9",
+                "path_type": "hardlink",
+                "sha256": "b2436f964b0f7eedaf2ee5449f96881526cb4aad4014e0a2a7742cd65e0c9809",
+                "sha256_in_prefix": "b2436f964b0f7eedaf2ee5449f96881526cb4aad4014e0a2a7742cd65e0c9809",
+                "size_in_bytes": 55296
+            },
+            {
+                "_path": "lib/pkgconfig/libbrotlidec.pc",
+                "path_type": "hardlink",
+                "sha256": "5a2de66f4d98f50a465d46ded455e47c6ca2ab9befdd3a85a8f7bcf649b7e855",
+                "sha256_in_prefix": "3ab1fb41aab42c5c898bd8c269a4854e0042eeb6227d2c8b76b66c7fc3a797d4",
+                "size_in_bytes": 787
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "d88ba07c3be27c89cb4975cc7edf63ee7b1c62d01f70d5c3f7efeb987c82b052",
+    "size": 34236,
+    "subdir": "linux-64",
+    "timestamp": 1666788664677,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/libbrotlidec-1.0.9-h166bdaf_8.tar.bz2",
+    "version": "1.0.9"
+}

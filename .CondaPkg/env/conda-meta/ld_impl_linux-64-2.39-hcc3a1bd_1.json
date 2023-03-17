@@ -1,0 +1,66 @@
+{
+    "arch": "x86_64",
+    "build": "hcc3a1bd_1",
+    "build_number": 1,
+    "build_string": "hcc3a1bd_1",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [
+        "binutils_impl_linux-64 2.39"
+    ],
+    "depends": [],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/ld_impl_linux-64-2.39-hcc3a1bd_1",
+    "files": [
+        "bin/x86_64-conda-linux-gnu-ld",
+        "bin/x86_64-conda_cos6-linux-gnu-ld",
+        "x86_64-conda-linux-gnu/bin/ld",
+        "x86_64-conda_cos6-linux-gnu/bin/ld"
+    ],
+    "fn": "ld_impl_linux-64-2.39-hcc3a1bd_1.conda",
+    "license": "GPL-3.0-only",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/ld_impl_linux-64-2.39-hcc3a1bd_1",
+        "type": 1
+    },
+    "md5": "737be0d34c22d24432049ab7a3214de4",
+    "name": "ld_impl_linux-64",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/ld_impl_linux-64-2.39-hcc3a1bd_1.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "bin/x86_64-conda-linux-gnu-ld",
+                "path_type": "hardlink",
+                "sha256": "df3f63d3de9dead24eb0e40d0982d26777e3ef1b7f6ea7d8dd54cae31f0f5750",
+                "sha256_in_prefix": "df3f63d3de9dead24eb0e40d0982d26777e3ef1b7f6ea7d8dd54cae31f0f5750",
+                "size_in_bytes": 2413584
+            },
+            {
+                "_path": "bin/x86_64-conda_cos6-linux-gnu-ld",
+                "path_type": "softlink",
+                "sha256_in_prefix": "df3f63d3de9dead24eb0e40d0982d26777e3ef1b7f6ea7d8dd54cae31f0f5750",
+                "size_in_bytes": 2413584
+            },
+            {
+                "_path": "x86_64-conda-linux-gnu/bin/ld",
+                "path_type": "softlink",
+                "sha256_in_prefix": "df3f63d3de9dead24eb0e40d0982d26777e3ef1b7f6ea7d8dd54cae31f0f5750",
+                "size_in_bytes": 2413584
+            },
+            {
+                "_path": "x86_64-conda_cos6-linux-gnu/bin/ld",
+                "path_type": "softlink",
+                "sha256_in_prefix": "df3f63d3de9dead24eb0e40d0982d26777e3ef1b7f6ea7d8dd54cae31f0f5750",
+                "size_in_bytes": 2413584
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "3e7f203e33ea497b6e468279cc5fdef7d556473c25e7466b35fd672940392469",
+    "size": 691423,
+    "subdir": "linux-64",
+    "timestamp": 1668978314604,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/ld_impl_linux-64-2.39-hcc3a1bd_1.conda",
+    "version": "2.39"
+}

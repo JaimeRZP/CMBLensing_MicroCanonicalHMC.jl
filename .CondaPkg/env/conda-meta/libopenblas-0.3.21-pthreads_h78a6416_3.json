@@ -1,0 +1,56 @@
+{
+    "arch": "x86_64",
+    "build": "pthreads_h78a6416_3",
+    "build_number": 3,
+    "build_string": "pthreads_h78a6416_3",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [
+        "openblas >=0.3.21,<0.3.22.0a0"
+    ],
+    "depends": [
+        "libgcc-ng >=12",
+        "libgfortran-ng",
+        "libgfortran5 >=10.4.0"
+    ],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libopenblas-0.3.21-pthreads_h78a6416_3",
+    "files": [
+        "lib/libopenblas.so.0",
+        "lib/libopenblasp-r0.3.21.so"
+    ],
+    "fn": "libopenblas-0.3.21-pthreads_h78a6416_3.tar.bz2",
+    "license": "BSD-3-Clause",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libopenblas-0.3.21-pthreads_h78a6416_3",
+        "type": 1
+    },
+    "md5": "8c5963a49b6035c40646a763293fbb35",
+    "name": "libopenblas",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libopenblas-0.3.21-pthreads_h78a6416_3.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "lib/libopenblas.so.0",
+                "path_type": "softlink",
+                "sha256_in_prefix": "8da378a196b773a4e80a3bba785f3cb9d89e91e6d531c4ebda4b7bfd7ee598f2",
+                "size_in_bytes": 37308888
+            },
+            {
+                "_path": "lib/libopenblasp-r0.3.21.so",
+                "path_type": "hardlink",
+                "sha256": "8da378a196b773a4e80a3bba785f3cb9d89e91e6d531c4ebda4b7bfd7ee598f2",
+                "sha256_in_prefix": "8da378a196b773a4e80a3bba785f3cb9d89e91e6d531c4ebda4b7bfd7ee598f2",
+                "size_in_bytes": 37308888
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "018372af663987265cb3ca8f37ac8c22b5f39219f65a0c162b056a30af11bba0",
+    "size": 10577687,
+    "subdir": "linux-64",
+    "timestamp": 1662061887050,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/libopenblas-0.3.21-pthreads_h78a6416_3.tar.bz2",
+    "version": "0.3.21"
+}

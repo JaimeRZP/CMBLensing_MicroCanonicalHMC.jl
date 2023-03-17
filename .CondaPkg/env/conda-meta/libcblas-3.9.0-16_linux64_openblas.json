@@ -1,0 +1,55 @@
+{
+    "arch": "x86_64",
+    "build": "16_linux64_openblas",
+    "build_number": 16,
+    "build_string": "16_linux64_openblas",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [
+        "liblapacke 3.9.0 16_linux64_openblas",
+        "liblapack 3.9.0 16_linux64_openblas",
+        "blas * openblas"
+    ],
+    "depends": [
+        "libblas 3.9.0 16_linux64_openblas"
+    ],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libcblas-3.9.0-16_linux64_openblas",
+    "files": [
+        "lib/libcblas.so",
+        "lib/libcblas.so.3"
+    ],
+    "fn": "libcblas-3.9.0-16_linux64_openblas.tar.bz2",
+    "license": "BSD-3-Clause",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libcblas-3.9.0-16_linux64_openblas",
+        "type": 1
+    },
+    "md5": "20bae26d0a1db73f758fc3754cab4719",
+    "name": "libcblas",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/libcblas-3.9.0-16_linux64_openblas.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "lib/libcblas.so",
+                "path_type": "softlink",
+                "sha256_in_prefix": "8da378a196b773a4e80a3bba785f3cb9d89e91e6d531c4ebda4b7bfd7ee598f2",
+                "size_in_bytes": 37308888
+            },
+            {
+                "_path": "lib/libcblas.so.3",
+                "path_type": "softlink",
+                "sha256_in_prefix": "8da378a196b773a4e80a3bba785f3cb9d89e91e6d531c4ebda4b7bfd7ee598f2",
+                "size_in_bytes": 37308888
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "e4ceab90a49cb3ac1af20177016dc92066aa278eded19646bb928d261b98367f",
+    "size": 12805,
+    "subdir": "linux-64",
+    "timestamp": 1660094437976,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/libcblas-3.9.0-16_linux64_openblas.tar.bz2",
+    "version": "3.9.0"
+}

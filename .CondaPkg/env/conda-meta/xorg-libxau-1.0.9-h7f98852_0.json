@@ -1,0 +1,76 @@
+{
+    "arch": "x86_64",
+    "build": "h7f98852_0",
+    "build_number": 0,
+    "build_string": "h7f98852_0",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [],
+    "depends": [
+        "libgcc-ng >=9.3.0"
+    ],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/xorg-libxau-1.0.9-h7f98852_0",
+    "files": [
+        "include/X11/Xauth.h",
+        "lib/libXau.so",
+        "lib/libXau.so.6",
+        "lib/libXau.so.6.0.0",
+        "lib/pkgconfig/xau.pc"
+    ],
+    "fn": "xorg-libxau-1.0.9-h7f98852_0.tar.bz2",
+    "license": "MIT",
+    "license_family": "MIT",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/xorg-libxau-1.0.9-h7f98852_0",
+        "type": 1
+    },
+    "md5": "bf6f803a544f26ebbdc3bfff272eb179",
+    "name": "xorg-libxau",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/xorg-libxau-1.0.9-h7f98852_0.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "include/X11/Xauth.h",
+                "path_type": "hardlink",
+                "sha256": "5c217ce77f5e1eb12dbf0353bcb7204b2f2a3d5ae586fdb17b3255a056190d02",
+                "sha256_in_prefix": "5c217ce77f5e1eb12dbf0353bcb7204b2f2a3d5ae586fdb17b3255a056190d02",
+                "size_in_bytes": 3817
+            },
+            {
+                "_path": "lib/libXau.so",
+                "path_type": "softlink",
+                "sha256_in_prefix": "2fdab78776c856f34499cf3bd1bbdbea046e85a7436d4289f1e477006323802b",
+                "size_in_bytes": 18088
+            },
+            {
+                "_path": "lib/libXau.so.6",
+                "path_type": "softlink",
+                "sha256_in_prefix": "2fdab78776c856f34499cf3bd1bbdbea046e85a7436d4289f1e477006323802b",
+                "size_in_bytes": 18088
+            },
+            {
+                "_path": "lib/libXau.so.6.0.0",
+                "path_type": "hardlink",
+                "sha256": "2fdab78776c856f34499cf3bd1bbdbea046e85a7436d4289f1e477006323802b",
+                "sha256_in_prefix": "2fdab78776c856f34499cf3bd1bbdbea046e85a7436d4289f1e477006323802b",
+                "size_in_bytes": 18088
+            },
+            {
+                "_path": "lib/pkgconfig/xau.pc",
+                "path_type": "hardlink",
+                "sha256": "e1e19ed4ccf618de7ef30103d081896e379788b8e8d97d20bebbbda9b4a83454",
+                "sha256_in_prefix": "16c72e4115e6a24bcf11f66e7ecc222c144f01c97de269e434823c4993390e36",
+                "size_in_bytes": 483
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "9e9b70c24527289ac7ae31925d1eb3b0c1e9a78cb7b8f58a3110cc8bbfe51c26",
+    "size": 13384,
+    "subdir": "linux-64",
+    "timestamp": 1610080328181,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/xorg-libxau-1.0.9-h7f98852_0.tar.bz2",
+    "version": "1.0.9"
+}

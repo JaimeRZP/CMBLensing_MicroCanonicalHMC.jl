@@ -1,0 +1,568 @@
+{
+    "arch": "x86_64",
+    "build": "py311he595559_0",
+    "build_number": 0,
+    "build_string": "py311he595559_0",
+    "channel": "https://conda.anaconda.org/conda-forge/linux-64",
+    "constrains": [],
+    "depends": [
+        "gfortran_linux-64 11.*",
+        "libgcc-ng >=12",
+        "libgfortran-ng",
+        "libgfortran5 >=11.3.0",
+        "mock",
+        "numpy",
+        "python >=3.11,<3.12.0a0",
+        "python_abi 3.11.* *_cp311",
+        "scipy >=1.0",
+        "setuptools",
+        "six",
+        "sympy >=1.0"
+    ],
+    "extracted_package_dir": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/camb-1.4.0-py311he595559_0",
+    "files": [
+        "bin/camb",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/PKG-INFO",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/SOURCES.txt",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/dependency_links.txt",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/entry_points.txt",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/installed-files.txt",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/not-zip-safe",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/requires.txt",
+        "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/top_level.txt",
+        "lib/python3.11/site-packages/camb/HighLExtrapTemplate_lenspotentialCls.dat",
+        "lib/python3.11/site-packages/camb/PArthENoPE_880.2_marcucci.dat",
+        "lib/python3.11/site-packages/camb/PArthENoPE_880.2_standard.dat",
+        "lib/python3.11/site-packages/camb/PRIMAT_Yp_DH_Error.dat",
+        "lib/python3.11/site-packages/camb/PRIMAT_Yp_DH_ErrorMC_2021.dat",
+        "lib/python3.11/site-packages/camb/__init__.py",
+        "lib/python3.11/site-packages/camb/__pycache__/__init__.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/_command_line.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/_compilers.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/_config.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/baseconfig.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/bbn.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/bispectrum.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/camb.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/constants.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/correlations.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/dark_energy.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/emission_angle.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/initialpower.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/mathutils.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/model.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/nonlinear.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/postborn.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/recombination.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/reionization.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/results.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/sources.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/__pycache__/symbolic.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/_command_line.py",
+        "lib/python3.11/site-packages/camb/_compilers.py",
+        "lib/python3.11/site-packages/camb/_config.py",
+        "lib/python3.11/site-packages/camb/baseconfig.py",
+        "lib/python3.11/site-packages/camb/bbn.py",
+        "lib/python3.11/site-packages/camb/bispectrum.py",
+        "lib/python3.11/site-packages/camb/camb.py",
+        "lib/python3.11/site-packages/camb/camblib.so",
+        "lib/python3.11/site-packages/camb/constants.py",
+        "lib/python3.11/site-packages/camb/correlations.py",
+        "lib/python3.11/site-packages/camb/dark_energy.py",
+        "lib/python3.11/site-packages/camb/emission_angle.py",
+        "lib/python3.11/site-packages/camb/initialpower.py",
+        "lib/python3.11/site-packages/camb/mathutils.py",
+        "lib/python3.11/site-packages/camb/model.py",
+        "lib/python3.11/site-packages/camb/nonlinear.py",
+        "lib/python3.11/site-packages/camb/postborn.py",
+        "lib/python3.11/site-packages/camb/recombination.py",
+        "lib/python3.11/site-packages/camb/reionization.py",
+        "lib/python3.11/site-packages/camb/results.py",
+        "lib/python3.11/site-packages/camb/sources.py",
+        "lib/python3.11/site-packages/camb/symbolic.py",
+        "lib/python3.11/site-packages/camb/tests/__init__.py",
+        "lib/python3.11/site-packages/camb/tests/__pycache__/__init__.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/tests/__pycache__/camb_test.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/tests/__pycache__/hmcode_test.cpython-311.pyc",
+        "lib/python3.11/site-packages/camb/tests/camb_test.py",
+        "lib/python3.11/site-packages/camb/tests/hmcode_test.py"
+    ],
+    "fn": "camb-1.4.0-py311he595559_0.conda",
+    "license": "modified LGPL",
+    "license_family": "LGPL",
+    "link": {
+        "source": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/camb-1.4.0-py311he595559_0",
+        "type": 1
+    },
+    "md5": "a6a1e2c4db8e73b62e864b77d6e732ac",
+    "name": "camb",
+    "package_tarball_full_path": "/home/jaimerz/.julia/scratchspaces/0b3b1443-0f03-428d-bdfb-f27f9c1191ea/root/pkgs/camb-1.4.0-py311he595559_0.tar.bz2",
+    "paths_data": {
+        "paths": [
+            {
+                "_path": "bin/camb",
+                "path_type": "hardlink",
+                "sha256": "d0aa05ef064fd858eafe034506b2583b6a83a32cefe11f8e29fe6de9ca04d8c6",
+                "sha256_in_prefix": "bbe3f705414407e8e9c405dcc5c2256e6e90a3f8b0a1dbeb6d4f25d7ef17c28c",
+                "size_in_bytes": 1193
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/PKG-INFO",
+                "path_type": "hardlink",
+                "sha256": "f72c5aef75c2ab311ccc2c53713db2e0005befb8382c3f26b0ccdd5df7adbdf3",
+                "sha256_in_prefix": "f72c5aef75c2ab311ccc2c53713db2e0005befb8382c3f26b0ccdd5df7adbdf3",
+                "size_in_bytes": 2528
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/SOURCES.txt",
+                "path_type": "hardlink",
+                "sha256": "6a147bbec3f2beb40d9eb9a4a3c92ab42aa8ca450a897d437273cf260bb024c6",
+                "sha256_in_prefix": "6a147bbec3f2beb40d9eb9a4a3c92ab42aa8ca450a897d437273cf260bb024c6",
+                "size_in_bytes": 2309
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/dependency_links.txt",
+                "path_type": "hardlink",
+                "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+                "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+                "size_in_bytes": 1
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/entry_points.txt",
+                "path_type": "hardlink",
+                "sha256": "ee491cc96e0abc04e1b904de58831c31d6fe39f7bbe8193e9ec39c787a3d6ea7",
+                "sha256_in_prefix": "ee491cc96e0abc04e1b904de58831c31d6fe39f7bbe8193e9ec39c787a3d6ea7",
+                "size_in_bytes": 61
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/installed-files.txt",
+                "path_type": "hardlink",
+                "sha256": "d29f5924b1f53119e0d6bac761bcf349206294a3e324e12d599090a0b8bb8e9d",
+                "sha256_in_prefix": "d29f5924b1f53119e0d6bac761bcf349206294a3e324e12d599090a0b8bb8e9d",
+                "size_in_bytes": 2052
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/not-zip-safe",
+                "path_type": "hardlink",
+                "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+                "sha256_in_prefix": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
+                "size_in_bytes": 1
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/requires.txt",
+                "path_type": "hardlink",
+                "sha256": "1505d6806efe1fd367e192d3b1965ab6c58c476fa2630778c8ab7f563222364a",
+                "sha256_in_prefix": "1505d6806efe1fd367e192d3b1965ab6c58c476fa2630778c8ab7f563222364a",
+                "size_in_bytes": 22
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb-1.4.0-py3.11.egg-info/top_level.txt",
+                "path_type": "hardlink",
+                "sha256": "e6f80c5d28144fefb5185b437719116e7026f6565907291b11e72275498a4468",
+                "sha256_in_prefix": "e6f80c5d28144fefb5185b437719116e7026f6565907291b11e72275498a4468",
+                "size_in_bytes": 5
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/HighLExtrapTemplate_lenspotentialCls.dat",
+                "path_type": "hardlink",
+                "sha256": "b28cdf4bda2fd90cfea901824b9523713fb0fcd67feef9a9ed7a697e5533253f",
+                "sha256_in_prefix": "b28cdf4bda2fd90cfea901824b9523713fb0fcd67feef9a9ed7a697e5533253f",
+                "size_in_bytes": 896001
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/PArthENoPE_880.2_marcucci.dat",
+                "path_type": "hardlink",
+                "sha256": "57fda118e4a84118ce9982cff088878e33ada135557c86fe964560c9f0dfb555",
+                "sha256_in_prefix": "57fda118e4a84118ce9982cff088878e33ada135557c86fe964560c9f0dfb555",
+                "size_in_bytes": 55509
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/PArthENoPE_880.2_standard.dat",
+                "path_type": "hardlink",
+                "sha256": "023dae713d8389c36b3bb1ce7d40e5079e83ba9d405d3bc84987da1c3b07a1ab",
+                "sha256_in_prefix": "023dae713d8389c36b3bb1ce7d40e5079e83ba9d405d3bc84987da1c3b07a1ab",
+                "size_in_bytes": 55509
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/PRIMAT_Yp_DH_Error.dat",
+                "path_type": "hardlink",
+                "sha256": "c51aa63d7ad79d21aaa11f8f6e5b919a480c01c9e8a8022a6f491c9497546eea",
+                "sha256_in_prefix": "c51aa63d7ad79d21aaa11f8f6e5b919a480c01c9e8a8022a6f491c9497546eea",
+                "size_in_bytes": 106579
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/PRIMAT_Yp_DH_ErrorMC_2021.dat",
+                "path_type": "hardlink",
+                "sha256": "5c6b03bc707d314f1456eae6519f0534286fc88df99719b8449dd5b2c72b2e9f",
+                "sha256_in_prefix": "5c6b03bc707d314f1456eae6519f0534286fc88df99719b8449dd5b2c72b2e9f",
+                "size_in_bytes": 106740
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__init__.py",
+                "path_type": "hardlink",
+                "sha256": "34d881910ed325e8ca5686a28d193ab44a60b9f2c02604c360dfcef910921f45",
+                "sha256_in_prefix": "34d881910ed325e8ca5686a28d193ab44a60b9f2c02604c360dfcef910921f45",
+                "size_in_bytes": 1118
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/__init__.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "f404b36e85e476b41a460f9d79c5933098a49df0fb8dcabc8c6f46bfc3fb70d8",
+                "sha256_in_prefix": "f404b36e85e476b41a460f9d79c5933098a49df0fb8dcabc8c6f46bfc3fb70d8",
+                "size_in_bytes": 2038
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/_command_line.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "113f06425d074e0af5726bb7d41598e82ffacc3b322d57fcdec50a73027ab38c",
+                "sha256_in_prefix": "113f06425d074e0af5726bb7d41598e82ffacc3b322d57fcdec50a73027ab38c",
+                "size_in_bytes": 2687
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/_compilers.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "bac8a373446d9d69cd1c63812362c74319a0493339d13e97042b7c16832b1ca8",
+                "sha256_in_prefix": "bac8a373446d9d69cd1c63812362c74319a0493339d13e97042b7c16832b1ca8",
+                "size_in_bytes": 7454
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/_config.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "94f368a40a2720943aed8ad86666c2e185450add147767393df7456129303324",
+                "sha256_in_prefix": "94f368a40a2720943aed8ad86666c2e185450add147767393df7456129303324",
+                "size_in_bytes": 3184
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/baseconfig.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "5625cf5d06de2e625ad5b9845417808c47cfe36a903550d65ee02f06c7309191",
+                "sha256_in_prefix": "5625cf5d06de2e625ad5b9845417808c47cfe36a903550d65ee02f06c7309191",
+                "size_in_bytes": 46835
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/bbn.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "3d0b43879da8494083fb901da1e4b898bb5091debb2bd1f8c4707ce70aa741d8",
+                "sha256_in_prefix": "3d0b43879da8494083fb901da1e4b898bb5091debb2bd1f8c4707ce70aa741d8",
+                "size_in_bytes": 13554
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/bispectrum.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "8c2d3575c0818c2e969137cde6165d675d29487c4d49c0c7b04febdc914e4a46",
+                "sha256_in_prefix": "8c2d3575c0818c2e969137cde6165d675d29487c4d49c0c7b04febdc914e4a46",
+                "size_in_bytes": 1024
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/camb.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "31ba4353346b056b0dc0321076ee5cfc11ec67f8c377237c16c5f878ab709cb4",
+                "sha256_in_prefix": "31ba4353346b056b0dc0321076ee5cfc11ec67f8c377237c16c5f878ab709cb4",
+                "size_in_bytes": 22236
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/constants.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "f274cb976779f2231011dde562b0aa4a0b07d82a2ef462eb7b8c62f680580be3",
+                "sha256_in_prefix": "f274cb976779f2231011dde562b0aa4a0b07d82a2ef462eb7b8c62f680580be3",
+                "size_in_bytes": 1802
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/correlations.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "aee70425094b3dd2a3b4f640f8a86040aaaf604786cec2b5a570b65009fc9696",
+                "sha256_in_prefix": "aee70425094b3dd2a3b4f640f8a86040aaaf604786cec2b5a570b65009fc9696",
+                "size_in_bytes": 47981
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/dark_energy.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "3a58b43d2535fa8717963592555fa3271c8bd9c1a2c942c00e9e4940c7452522",
+                "sha256_in_prefix": "3a58b43d2535fa8717963592555fa3271c8bd9c1a2c942c00e9e4940c7452522",
+                "size_in_bytes": 10742
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/emission_angle.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "699f495a958e497a65e5b733861458348473317a8e1c46364aa3253a44a5340d",
+                "sha256_in_prefix": "699f495a958e497a65e5b733861458348473317a8e1c46364aa3253a44a5340d",
+                "size_in_bytes": 13965
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/initialpower.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "63cd168c4a2b38d77cb47fa4898317b03eeee6aaf659e1392397d06de862a938",
+                "sha256_in_prefix": "63cd168c4a2b38d77cb47fa4898317b03eeee6aaf659e1392397d06de862a938",
+                "size_in_bytes": 9944
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/mathutils.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "3948941732d9adcb0d041a8fc5fa25102329fdf81d7dc7c5524a7005a945e3c5",
+                "sha256_in_prefix": "3948941732d9adcb0d041a8fc5fa25102329fdf81d7dc7c5524a7005a945e3c5",
+                "size_in_bytes": 9710
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/model.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "0d5b06673ff72fb501102185dd4abfcde09c2bc19a255c00fd20065dcfb4aa0a",
+                "sha256_in_prefix": "0d5b06673ff72fb501102185dd4abfcde09c2bc19a255c00fd20065dcfb4aa0a",
+                "size_in_bytes": 54035
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/nonlinear.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "595eb69353e5a1de44489b73c553b903bd5e0977d257d9ba8d191b41f8cdfe77",
+                "sha256_in_prefix": "595eb69353e5a1de44489b73c553b903bd5e0977d257d9ba8d191b41f8cdfe77",
+                "size_in_bytes": 4991
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/postborn.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "453d29dfcafa820742d4bb54dde9dda0f373380d92d78a79dc02ff871d35bb6d",
+                "sha256_in_prefix": "453d29dfcafa820742d4bb54dde9dda0f373380d92d78a79dc02ff871d35bb6d",
+                "size_in_bytes": 15223
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/recombination.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "1f79d8746dc49db5631a26c53e1bb3dc4c55e4f97f3d1cea5b9d96cbe5803ece",
+                "sha256_in_prefix": "1f79d8746dc49db5631a26c53e1bb3dc4c55e4f97f3d1cea5b9d96cbe5803ece",
+                "size_in_bytes": 3153
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/reionization.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "ec7ea784861a8fd4abcfbbe874006df733bbfac39b386e0f1c108e0ef5274161",
+                "sha256_in_prefix": "ec7ea784861a8fd4abcfbbe874006df733bbfac39b386e0f1c108e0ef5274161",
+                "size_in_bytes": 4393
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/results.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "6563f8301fe4d514d985f019b25c14dd827e3ca975f961863bde4b62f8c4bcac",
+                "sha256_in_prefix": "6563f8301fe4d514d985f019b25c14dd827e3ca975f961863bde4b62f8c4bcac",
+                "size_in_bytes": 107165
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/sources.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "b9c3b8ace605208e164e3523599b9afb6730e8aaabc894b1574eea3cd28d0dba",
+                "sha256_in_prefix": "b9c3b8ace605208e164e3523599b9afb6730e8aaabc894b1574eea3cd28d0dba",
+                "size_in_bytes": 5859
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/__pycache__/symbolic.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "206f810c5c141f15d33cfc1f8c97fa2c2b85e9be3869c86811d7d991520349f2",
+                "sha256_in_prefix": "206f810c5c141f15d33cfc1f8c97fa2c2b85e9be3869c86811d7d991520349f2",
+                "size_in_bytes": 58305
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/_command_line.py",
+                "path_type": "hardlink",
+                "sha256": "bddbddae9e4ef94ff2b313b838ddba4ebff2ebb912395527146e98d9ab35ba3e",
+                "sha256_in_prefix": "bddbddae9e4ef94ff2b313b838ddba4ebff2ebb912395527146e98d9ab35ba3e",
+                "size_in_bytes": 1658
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/_compilers.py",
+                "path_type": "hardlink",
+                "sha256": "2c6158720eaab7d49a3e62057e222e419269aac3ef3ad069ee268649f50a198b",
+                "sha256_in_prefix": "2c6158720eaab7d49a3e62057e222e419269aac3ef3ad069ee268649f50a198b",
+                "size_in_bytes": 4405
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/_config.py",
+                "path_type": "hardlink",
+                "sha256": "718c1613e2abde970bccb1573b55cc53223aa93edc7ea1849009ee3a1804bd9f",
+                "sha256_in_prefix": "718c1613e2abde970bccb1573b55cc53223aa93edc7ea1849009ee3a1804bd9f",
+                "size_in_bytes": 2556
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/baseconfig.py",
+                "path_type": "hardlink",
+                "sha256": "9705c31af41ec335023e0985e64c178bb77f87339d3223b053aa2208bf8d412d",
+                "sha256_in_prefix": "9705c31af41ec335023e0985e64c178bb77f87339d3223b053aa2208bf8d412d",
+                "size_in_bytes": 30001
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/bbn.py",
+                "path_type": "hardlink",
+                "sha256": "8161ef3afdbced50a45c7fe42da9841c16fba7ed8d3e797695e914983caa4cdf",
+                "sha256_in_prefix": "8161ef3afdbced50a45c7fe42da9841c16fba7ed8d3e797695e914983caa4cdf",
+                "size_in_bytes": 9707
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/bispectrum.py",
+                "path_type": "hardlink",
+                "sha256": "1e5d8ebbb101f467be64a7075c6640995840fa26df09e78a06e4066ea66c1e5b",
+                "sha256_in_prefix": "1e5d8ebbb101f467be64a7075c6640995840fa26df09e78a06e4066ea66c1e5b",
+                "size_in_bytes": 803
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/camb.py",
+                "path_type": "hardlink",
+                "sha256": "995de1ca622919fcf1e05cddadbcbfeba5649cc4bfb98a55c92cd8a931112b40",
+                "sha256_in_prefix": "995de1ca622919fcf1e05cddadbcbfeba5649cc4bfb98a55c92cd8a931112b40",
+                "size_in_bytes": 15818
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/camblib.so",
+                "path_type": "hardlink",
+                "sha256": "30ac67fb767b9066a5e66e68011a5f18562602c6da003e93d11ede7772198514",
+                "sha256_in_prefix": "30ac67fb767b9066a5e66e68011a5f18562602c6da003e93d11ede7772198514",
+                "size_in_bytes": 1895376
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/constants.py",
+                "path_type": "hardlink",
+                "sha256": "87dbd17699c4be29a6fa4a6bdd8cb5bb53ed811614d3d319adfc35d7f3fa2e6b",
+                "sha256_in_prefix": "87dbd17699c4be29a6fa4a6bdd8cb5bb53ed811614d3d319adfc35d7f3fa2e6b",
+                "size_in_bytes": 1710
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/correlations.py",
+                "path_type": "hardlink",
+                "sha256": "639eca5f01383355c4f87884562e63ffb9e4f8f81641d7249b70f9a943caa9d1",
+                "sha256_in_prefix": "639eca5f01383355c4f87884562e63ffb9e4f8f81641d7249b70f9a943caa9d1",
+                "size_in_bytes": 32373
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/dark_energy.py",
+                "path_type": "hardlink",
+                "sha256": "f67765af819aea5d69a1b1cc2d805ab389075e39d53843fc9e7d85301352f09b",
+                "sha256_in_prefix": "f67765af819aea5d69a1b1cc2d805ab389075e39d53843fc9e7d85301352f09b",
+                "size_in_bytes": 7878
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/emission_angle.py",
+                "path_type": "hardlink",
+                "sha256": "1379113391ac8d030c159b662f60009adc9df63d115d61762690f121cef720fa",
+                "sha256_in_prefix": "1379113391ac8d030c159b662f60009adc9df63d115d61762690f121cef720fa",
+                "size_in_bytes": 9908
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/initialpower.py",
+                "path_type": "hardlink",
+                "sha256": "2f730fb3478ed85875ef4d5b110173aa5811167b770b7bc0570a2a5db7538d2d",
+                "sha256_in_prefix": "2f730fb3478ed85875ef4d5b110173aa5811167b770b7bc0570a2a5db7538d2d",
+                "size_in_bytes": 6842
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/mathutils.py",
+                "path_type": "hardlink",
+                "sha256": "c2fb5d1571ae525320790124662735c6ffcc8db0053de5e3f1675e6d42ce8404",
+                "sha256_in_prefix": "c2fb5d1571ae525320790124662735c6ffcc8db0053de5e3f1675e6d42ce8404",
+                "size_in_bytes": 5572
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/model.py",
+                "path_type": "hardlink",
+                "sha256": "44bb1336d6bbc5b3a2adf8169fa2cfbd77fa573f597748af1e0da00afc051f91",
+                "sha256_in_prefix": "44bb1336d6bbc5b3a2adf8169fa2cfbd77fa573f597748af1e0da00afc051f91",
+                "size_in_bytes": 45674
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/nonlinear.py",
+                "path_type": "hardlink",
+                "sha256": "40a21815bdf68283b0fbe09d626827fb7aec0e397e4faadd6078893f3263d257",
+                "sha256_in_prefix": "40a21815bdf68283b0fbe09d626827fb7aec0e397e4faadd6078893f3263d257",
+                "size_in_bytes": 4252
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/postborn.py",
+                "path_type": "hardlink",
+                "sha256": "628db6e3b8e0b50cb1a19c67d3c3403632a24142e0b831421bf6abe4a26d0a26",
+                "sha256_in_prefix": "628db6e3b8e0b50cb1a19c67d3c3403632a24142e0b831421bf6abe4a26d0a26",
+                "size_in_bytes": 9681
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/recombination.py",
+                "path_type": "hardlink",
+                "sha256": "ddfbf9f5447c6110ab13ddeda497379bc55a5b04856921501ada661468fe12f2",
+                "sha256_in_prefix": "ddfbf9f5447c6110ab13ddeda497379bc55a5b04856921501ada661468fe12f2",
+                "size_in_bytes": 2277
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/reionization.py",
+                "path_type": "hardlink",
+                "sha256": "81325086a2c5124b0e06219c45bebd383f79ee62f2d21528b06573fca77a0fd6",
+                "sha256_in_prefix": "81325086a2c5124b0e06219c45bebd383f79ee62f2d21528b06573fca77a0fd6",
+                "size_in_bytes": 3456
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/results.py",
+                "path_type": "hardlink",
+                "sha256": "25411d6009c7e5c5ab736f43305367a5e4e7e82c6d6c3c40712be1c556591610",
+                "sha256_in_prefix": "25411d6009c7e5c5ab736f43305367a5e4e7e82c6d6c3c40712be1c556591610",
+                "size_in_bytes": 81286
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/sources.py",
+                "path_type": "hardlink",
+                "sha256": "557685c8dc3db247ee8115737ef3be01c6698cb0a7fb21c616f59112fcf4786d",
+                "sha256_in_prefix": "557685c8dc3db247ee8115737ef3be01c6698cb0a7fb21c616f59112fcf4786d",
+                "size_in_bytes": 3559
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/symbolic.py",
+                "path_type": "hardlink",
+                "sha256": "9102c48d903a17e8dc1a45f0d3d164ea017cf583b9394686aecdccc144a9b3cc",
+                "sha256_in_prefix": "9102c48d903a17e8dc1a45f0d3d164ea017cf583b9394686aecdccc144a9b3cc",
+                "size_in_bytes": 38284
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/__init__.py",
+                "path_type": "hardlink",
+                "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+                "sha256_in_prefix": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/__pycache__/__init__.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "d97a8437f340799f32a91ff8fc313831f132c0b1ff6f22e75ce0b70c7fcdd83a",
+                "sha256_in_prefix": "d97a8437f340799f32a91ff8fc313831f132c0b1ff6f22e75ce0b70c7fcdd83a",
+                "size_in_bytes": 160
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/__pycache__/camb_test.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "2d5eed791a1a8dff27ffb6ff85563b5a3e8ec6b3a4f86f2c3d50f6fe681d670e",
+                "sha256_in_prefix": "2d5eed791a1a8dff27ffb6ff85563b5a3e8ec6b3a4f86f2c3d50f6fe681d670e",
+                "size_in_bytes": 68801
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/__pycache__/hmcode_test.cpython-311.pyc",
+                "path_type": "hardlink",
+                "sha256": "7362263c877a28f500c72c9c939b76edc682cae29aa42ed0724f0a04eb497b25",
+                "sha256_in_prefix": "7362263c877a28f500c72c9c939b76edc682cae29aa42ed0724f0a04eb497b25",
+                "size_in_bytes": 8896
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/camb_test.py",
+                "path_type": "hardlink",
+                "sha256": "c8d2dddbd10de609aa500aff68d609b9bf59fa770fd6ae113438d37b9079df76",
+                "sha256_in_prefix": "c8d2dddbd10de609aa500aff68d609b9bf59fa770fd6ae113438d37b9079df76",
+                "size_in_bytes": 38909
+            },
+            {
+                "_path": "lib/python3.11/site-packages/camb/tests/hmcode_test.py",
+                "path_type": "hardlink",
+                "sha256": "bbed35eba15c39dfa3f8f3f3e3f367bd9e7fd0cd0ce90e7740079a57f9373a3c",
+                "sha256_in_prefix": "bbed35eba15c39dfa3f8f3f3e3f367bd9e7fd0cd0ce90e7740079a57f9373a3c",
+                "size_in_bytes": 8407
+            }
+        ],
+        "paths_version": 1
+    },
+    "platform": "linux",
+    "requested_spec": "",
+    "sha256": "e9d2864ca063e53aec31f68edf7a065a99a793fddf54ad36535466136df7e410",
+    "size": 959798,
+    "subdir": "linux-64",
+    "timestamp": 1675869498376,
+    "track_features": "",
+    "url": "https://conda.anaconda.org/conda-forge/linux-64/camb-1.4.0-py311he595559_0.conda",
+    "version": "1.4.0"
+}
