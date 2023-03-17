@@ -118,7 +118,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
     if no_divergences
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
-            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
+            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE/varE_wanted-1)
             new_log_eps = max(log(0.00005), new_log_eps)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
