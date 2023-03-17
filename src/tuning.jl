@@ -144,12 +144,21 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
+function tune_hyperparameters(sampler::Sampler, target::Target, init;
+                              burn_in::Int=0, kwargs...)
     sett = sampler.settings
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
 
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
+    
+    if burn_in > 0   
+    @info "Starting burn in"        
+        for i in 1:burn_in
+            init, sample = Step(sampler, target, init)
+        end
+    @info "Burn in finished"        
+    end        
 
     if tune_sigma
         tune_sigma!(sampler, target; kwargs...)
@@ -169,4 +178,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     end
 
     tune_nu!(sampler, target)
+     
+    return init    
 end
