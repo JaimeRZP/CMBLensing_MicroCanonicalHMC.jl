@@ -832,7 +832,7 @@ version = "2.36.0+0"
 deps = ["ForwardDiff", "Interpolations", "LinearAlgebra", "NPZ", "NumericalIntegration", "Optim", "PythonCall", "QuadGK", "Statistics", "Turing"]
 git-tree-sha1 = "bee31df6988e1411666c6401a820eb758ef65757"
 repo-rev = "Glamdring"
-repo-url = "https://github.com/JaimeRZP/LimberJack.jl"
+repo-url = "https://github.com/JaimeRZP/LimberJack.jl.git"
 uuid = "6b86205d-155a-4b14-b82d-b6a149ea78f2"
 version = "0.1.0"
 
