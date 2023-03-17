@@ -177,9 +177,8 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
     return step, [target.inv_transform(xx); dEE; -ll]
 end
 
-
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                file_name="samples", progress=true, kwargs...)
+                burn_in::Int=0, file_name="samples", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -190,11 +189,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     """
 
     state, sample = Init(sampler, target; kwargs...)
-    tune_hyperparameters(sampler, target, state; kwargs...)
-
-    for i in 1:sampler.settings.burn_in
-        state, sample = Step(sampler, target, state)
-    end
+    state = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
 
     samples = []
     push!(samples, sample)

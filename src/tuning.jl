@@ -118,7 +118,7 @@ function tune_eps!(sampler::Sampler, target::Target, init; α=1, kwargs...)
     if no_divergences
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05
         if !success
-            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE-varE_wanted)
+            new_log_eps = log(sampler.hyperparameters.eps)-α*(varE/varE_wanted-1)
             new_log_eps = max(log(0.00005), new_log_eps)
             sampler.hyperparameters.eps = exp(new_log_eps)
         else
@@ -144,12 +144,21 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
+function tune_hyperparameters(sampler::Sampler, target::Target, init;
+                              burn_in::Int=0, kwargs...)
     sett = sampler.settings
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
 
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
+    
+    if burn_in > 0   
+    @info "Starting burn in"        
+        for i in 1:burn_in
+            init, sample = Step(sampler, target, init)
+        end
+    @info "Burn in finished"        
+    end        
 
     if tune_sigma
         tune_sigma!(sampler, target; kwargs...)
@@ -169,4 +178,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init; kwargs...)
     end
 
     tune_nu!(sampler, target)
+     
+    return init    
 end
