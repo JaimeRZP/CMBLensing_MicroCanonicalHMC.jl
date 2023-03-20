@@ -1,6 +1,7 @@
 module MicroCanonicalHMC
 
 export Settings, Hyperparameters, MCHMC, Sample
+export Summarize
 export Leapfrog, Minimal_norm
 export TuringTarget, GaussianTarget, RosenbrockTarget, NealFunnelTarget, CustomTarget
 export ParallelTarget
