@@ -45,12 +45,16 @@ function tune_what(sampler::Sampler, target::Target)
     return tune_sigma, tune_eps, tune_L
 end
 
-function ess_corr(samples)
+function Summarize(samples)
     _samples = zeros(length(samples), length(samples[1]), 1)
     _samples[:, :, 1] = mapreduce(permutedims, vcat, samples)
     _samples = permutedims(_samples, (1,3,2))
     ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
+    return ess, rhat
+end
 
+function ess_corr(samples)
+    ess, rhat = Summarize(samples)
     neff = ess ./ length(samples)
     return 1.0 / mean(1 ./ neff)
 end

@@ -178,7 +178,7 @@ function Step(sampler::Sampler, target::Target, state; kwargs...)
 end
 
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                burn_in::Int=0, file_name="samples", progress=true, kwargs...)
+                burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -187,13 +187,17 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
         Returns:
             samples (shape = (num_steps, self.Target.d))
     """
+    
+    io = open(joinpath(fol_name, "VarNames.txt"), "w") do io
+        println(io, string(target.vsyms))
+    end        
 
     state, sample = Init(sampler, target; kwargs...)
     state = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
 
     samples = []
     push!(samples, sample)
-    io = open(string(file_name, ".txt"), "w") do io
+    io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         for i in 1:num_steps
             state, sample = Step(sampler, target, state; kwargs...)
@@ -201,6 +205,12 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
             println(io, sample)
         end
     end
-
+            
+    io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
+        ess, rhat = Summarize(samples)
+        println(io, ess)
+        println(io, rhat)
+    end         
+                
     return samples
 end
