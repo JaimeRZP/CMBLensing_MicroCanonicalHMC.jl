@@ -85,7 +85,7 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
         return ForwardDiff.hessian(nlogp, xt)
     end
 
-    function prior_draw(key)
+    function prior_draw()
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
         vi_t = Turing.link!!(vi, model)
@@ -143,8 +143,8 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
         return x
     end
 
-    function prior_draw(key)
-        x = [rand(key, dist) for dist in priors]
+    function prior_draw()
+        x = [rand(dist) for dist in priors]
         xt = transform(x)
         return xt
     end
@@ -199,7 +199,7 @@ GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
         return l, g
     end
 
-    function prior_draw(key)
+    function prior_draw()
         xt = rand(MvNormal(zeros(d), ones(d)))
         return xt
     end
@@ -277,7 +277,7 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
         return l, g
     end
 
-    function prior_draw(key)
+    function prior_draw()
         xt = rand(MvNormal(zeros(d), ones(d)))
         return xt
     end
@@ -322,7 +322,7 @@ NealFunnelTarget(model; d=0, kwargs...) = begin
         return -1 .* ∂lπ∂θ(xt)
     end
 
-    function prior_draw(key)
+    function prior_draw()
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
         return vi[DynamicPPL.SampleFromPrior()]

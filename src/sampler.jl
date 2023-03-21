@@ -68,7 +68,7 @@ function MCHMC(eps, L; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(sampler::Sampler, target::Target)
+function Random_unit_vector(target::Target)
     """Generates a random (isotropic) unit vector."""
     return Random_unit_vector(target.d)
 end
@@ -158,11 +158,11 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     if :initial_x ∈ keys(kwargs)
         x = target.transform(kwargs[:initial_x])
     else
-        x = target.prior_draw(sett.key)
+        x = target.prior_draw()
     end
     l, g = target.nlogp_grad_nlogp(x)
     g .*= d/(d-1)
-    u = Random_unit_vector(sampler, target) #random initial direction
+    u = Random_unit_vector(target) #random initial direction
 
     sample = [target.inv_transform(x); 0.0; -l]
     state = (x, u, l, g, 0.0)
