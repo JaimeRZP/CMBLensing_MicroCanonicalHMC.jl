@@ -92,7 +92,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u::Abstrac
 end
 
 function Partially_refresh_momentum(nu, key, d, u::AbstractVector)
-    z = nu .* Random_unit_vector(key, d)
+    z = nu .* Random_unit_vector(d)
     uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end
