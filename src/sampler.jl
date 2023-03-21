@@ -70,15 +70,15 @@ end
 
 function Random_unit_vector(sampler::Sampler, target::Target)
     """Generates a random (isotropic) unit vector."""
-    return Random_unit_vector(sampler.settings.key, target.d)
+    return Random_unit_vector(target.d)
 end
 
 function MCHMC(; kwargs...)
     return MCHMC(0.0, 0.0; kwargs...)
 end
 
-function Random_unit_vector(key, d)
-    u = randn(key, d)
+function Random_unit_vector(d)
+    u = randn(d)
     u ./= sqrt(sum(u.^2))
     return u
 end
