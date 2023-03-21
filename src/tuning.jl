@@ -53,7 +53,7 @@ function Summarize(samples)
     return ess, rhat
 end
 
-function ess_corr(samples)
+function neff(samples)
     ess, rhat = Summarize(samples)
     neff = ess ./ length(samples)
     return 1.0 / mean(1 ./ neff)
@@ -72,12 +72,12 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
             init, sample = Step(sampler, target, init; monitor_energy=true)
             push!(samples, sample)
         end
-        ESS = ess_corr(samples)
+        neff = neff(samples)
         if dialog
-            println(string("samples: ", length(samples), "--> ESS: ", ESS))
+            println(string("samples: ", length(samples), "--> 1/<1/ess>: ", neff))
         end
-        if length(samples) > 10.0 / ESS
-            sampler.hyperparameters.L = 0.4 * eps / ESS # = 0.4 * correlation length
+        if length(samples) > 10.0 / neff
+            sampler.hyperparameters.L = 0.4 * eps / neff # = 0.4 * correlation length
             @info string("Found L: ", sampler.hyperparameters.L, " ✅")
             break
         end
