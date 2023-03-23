@@ -45,11 +45,8 @@ function tune_what(sampler::EnsembleSampler, target::ParallelTarget)
     return tune_sigma, tune_eps, tune_L
 end
 
-function Summarize(samples::AbstractMatrix)
-    samples = convert(Vector{Any},[samples[i,:] for i in 1:size(samples,1)])
-    _samples = zeros(length(samples), length(samples[1]), 1)
-    _samples[:, :, 1] = mapreduce(permutedims, vcat, samples)
-    _samples = permutedims(_samples, (1,3,2))
+function Summarize(samples::AbstractArray)
+    _samples = convert(Array{Float64, 3}, samples)
     ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
     return ess, rhat
 end
@@ -69,14 +66,14 @@ function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs.
     for s in steps
         l += s 
         for i in 1:s
-            state, sample = Step(sampler, target, state; kwargs...)
+            init, sample = Step(sampler, target, init; kwargs...)
             X, E, L = sample
             chains[i, :, :] = [X E L]
         end
-        neffs = [Neff(chains[:, i, :]) for i in 1:nchains]
+        neffs = Neff(chains)
         neff = mean(neffs)
         if dialog
-            println(string("samples: ", length(samples), "--> 1/<1/ess>: ", neff))
+            println(string("samples: ", l, "--> 1/<1/ess>: ", neff))
         end
         if l > 10.0 / neff
             sampler.hyperparameters.L = 0.4 * eps / neff # = 0.4 * correlation length
@@ -109,9 +106,9 @@ function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
     no_divergences = isfinite(loss)
     if no_divergences
         if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.01)
-            return true, step, (target.inv_transform(xx), dE .+ dEE, -ll)
+            return true, step, (target.inv_transform(xx), dEE, -ll)
         else
-            return false, step, (target.inv_transform(xx), dE .+ dEE, -ll)
+            return false, step, (target.inv_transform(xx), dEE, -ll)
         end
     else
         @warn "Divergences encountered during burn-in. Reducing eps!"
@@ -174,6 +171,53 @@ function dual_averaging(sampler::EnsembleSampler, target::ParallelTarget, state;
 
     return success
 end
+        
+function adaptive_step(sampler::EnsembleSampler, target::ParallelTarget, init;
+                        sigma_xi::Float64=1.0,
+                        gamma::Float64=(50-1)/(50+1), # (neff-1)/(neff+1) 
+                        kwargs...)
+    dialog = get(kwargs, :dialog, false)
+    sett = sampler.settings
+    eps = sampler.hyperparameters.eps
+    varE_wanted = sett.varE_wanted
+    d = target.target.d
+    
+    step, yA, yB, max_eps = init    
+    step, _ = Step(sampler, target, step)
+    xx, uu, ll, gg, dEE = step
+    varE = mean(dEE.^2)/d
+    if dialog
+        println("eps: ", eps, " --> VarE/d: ", varE)
+    end    
+    
+    no_divergences = isfinite(varE)
+    if no_divergences    
+        success = (abs(varE-varE_wanted)/varE_wanted) < 0.05 
+        if !success
+            y = yA/yB    
+            xi = -log(varE/varE_wanted + 1e-8) / 6   
+            w = exp(-0.5*(xi/sigma_xi)^2)
+            # Kalman update the linear combinations
+            yA = gamma * yA + w * (xi + y) 
+            yB = gamma * yB + w
+            new_log_eps = yA/yB
+
+            if exp(new_log_eps) > max_eps
+                sampler.hyperparameters.eps = max_eps
+            else
+                sampler.hyperparameters.eps = exp(new_log_eps)        
+            end
+        else
+            @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
+        end
+    else
+        success = false    
+        max_eps = sampler.hyperparameters.eps
+        sampler.hyperparameters.eps = 0.5 * eps    
+    end
+        
+    return success, (step, yA, yB, max_eps)    
+end        
 
 function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
     eps = sampler.hyperparameters.eps
@@ -221,7 +265,7 @@ function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, 
             if i == burn_in
                 @warn "Maximum number of steps reached during burn-in"
             end            
-        end
+        end              
         if tune_sigma
             @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
         end            
@@ -241,6 +285,17 @@ function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, 
                 end
             end                
         end
+        if tuning_method=="AdaptiveStep"
+            yB = 0.1
+            yA = yB * log(sampler.hyperparameters.eps)    
+            tuning_init = (init, yA, yB, Inf)    
+            for i in 1:sett.tune_maxiter
+               success, tuning_init = adaptive_step(sampler, target, tuning_init; kwargs...)
+               if success
+                   break
+               end         
+            end
+        end                
     end
 
     if tune_L
