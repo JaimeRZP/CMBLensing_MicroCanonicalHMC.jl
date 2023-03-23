@@ -1,5 +1,4 @@
-#!/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/bin/python
-
+#!/home/jaimerz/Glamdring/MicroCanonicalHMC.jl/.CondaPkg/env/bin/python3.11
 # -*- coding: utf-8 -*-
 import re
 import sys

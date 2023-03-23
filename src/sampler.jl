@@ -68,13 +68,13 @@ function MCHMC(eps, L; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
+function MCHMC(; kwargs...)
+    return MCHMC(0.0, 0.0; kwargs...)
+end
+
 function Random_unit_vector(target::Target)
     """Generates a random (isotropic) unit vector."""
     return Random_unit_vector(target.d)
-end
-
-function MCHMC(; kwargs...)
-    return MCHMC(0.0, 0.0; kwargs...)
 end
 
 function Random_unit_vector(d)
@@ -86,12 +86,11 @@ end
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
     return Partially_refresh_momentum(sampler.hyperparameters.nu,
-                                      sampler.settings.key,
                                       target.d,
                                       u)
 end
 
-function Partially_refresh_momentum(nu, key, d, u::AbstractVector)
+function Partially_refresh_momentum(nu, d, u::AbstractVector)
     z = nu .* Random_unit_vector(d)
     uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
@@ -102,7 +101,7 @@ function Update_momentum(target::Target, eff_eps::Number,
     # TO DO: type inputs
     # Have to figure out where and when to define target
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
-    Update_momentum(target.d, eff_eps::Number,g ,u)
+    Update_momentum(target.d, eff_eps::Number, g ,u)
 end
 
 function Update_momentum(d::Number, eff_eps::Number,
@@ -171,10 +170,9 @@ end
 
 function Step(sampler::Sampler, target::Target, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-    x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
-    return step, [target.inv_transform(xx); dE + dEE; -ll]
+    return step, [target.inv_transform(xx); dEE; -ll]
 end
 
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
@@ -200,9 +198,13 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         for i in 1:num_steps
-            state, sample = Step(sampler, target, state; kwargs...)
-            push!(samples, sample)
-            println(io, sample)
+            try    
+                state, sample = Step(sampler, target, state; kwargs...)
+                push!(samples, sample)
+                println(io, sample)
+            catch
+                @warn "Divergence encountered after tuning"
+            end        
         end
     end
             
