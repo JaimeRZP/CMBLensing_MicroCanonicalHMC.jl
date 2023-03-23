@@ -57,28 +57,27 @@ function MCHMC(nchains; kwargs...)
     return MCHMC(0.0, 0.0, nchains; kwargs...)
 end
 
-function Random_unit_vector(sampler::EnsembleSampler, target::ParallelTarget; normalize=true)
+function Random_unit_vector(sampler::EnsembleSampler, target::ParallelTarget;)
     """Generates a random (isotropic) unit vector."""
-    sett = sampler.settings
-    return Random_unit_matrix(sett.key, sett.nchains, target.target.d; normalize=normalize)
+    return Random_unit_matrix(sampler.settings.nchains, target.target.d)
 end
 
-function Random_unit_matrix(key, nchains, d; normalize = true)
-    u = randn(key, nchains, d)
-    if normalize
-        u ./= sqrt.(sum(u.^2, dims=2))
-    end
+function Random_unit_matrix(nchains, d)
+    u = randn(nchains, d)
+    u ./= sqrt.(sum(u.^2, dims=2))
     return u
 end
 
 function Partially_refresh_momentum(sampler::EnsembleSampler, target::ParallelTarget, u)
     """Adds a small noise to u and normalizes."""
-    return Partially_refresh_momentum(sampler.hyperparameters.nu, sampler.settings.key,
-                                      sampler.settings.nchains, target.target.d, u; normalize = false)
+    return Partially_refresh_momentum(sampler.hyperparameters.nu,
+                                      sampler.settings.nchains,
+                                      target.target.d,
+                                      u)
 end
 
-function Partially_refresh_momentum(nu, key, nchains, d, u; normalize = false)
-    z = nu .* Random_unit_matrix(key, nchains, d; normalize=normalize)
+function Partially_refresh_momentum(nu, nchains, d, u)
+    z = nu .* Random_unit_matrix(nchains, d)
     uu = (u .+ z) ./ sqrt.(sum((u .+ z).^2, dims=2))
     return uu
 end
@@ -95,15 +94,24 @@ function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractMatrix ,u::AbstractMatrix)
     g_norm = sqrt.(sum(g .^2, dims=2))[:, 1]
     e = - g ./ g_norm
+    delta = eff_eps .* g_norm ./ (d-1)    
     # Matrix dot product along dim=2
     ue = sum(u .* e, dims=2)[:, 1]
-    sh = sinh.(eff_eps .* g_norm ./ d)
-    ch = cosh.(eff_eps .* g_norm ./ d)
-    th = tanh.(eff_eps .* g_norm ./ d)
-    delta_r = log.(ch) .+ log1p.(ue .* th)
-
+    
+    #=    
+    sh = sinh.(delta)
+    ch = cosh.(delta)
+    th = tanh.(delta)
     uu = @.((u + e * (sh + ue * (ch - 1))) / (ch + ue * sh))
-
+    uu ./= sqrt.(sum(uu.^2, dims=2))   
+    delta_r = log.(ch) .+ log1p.(ue .* th)
+    =#    
+    
+    zeta = exp.(-delta)
+    uu =  @.(e * ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) * u)
+    uu ./= sqrt.(sum(uu.^2, dims=2))
+    delta_r = delta .- log(2) .+ log.(1 .+ ue .+ (1 .- ue) .* zeta.^2)   
+    
     return uu, delta_r
 end
 
@@ -126,7 +134,7 @@ function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     if :initial_x ∈ keys(kwargs)
         x = target.transform(kwargs[:initial_x])
     else
-        x = target.prior_draw(sett.key)
+        x = target.prior_draw()
     end
     l, g = target.nlogp_grad_nlogp(x)
     g .*= d/(d-1)
@@ -140,18 +148,15 @@ end
 
 function Step(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
     """Tracks transform(x) as a function of number of iterations"""
-    sett = sampler.settings
-    x, u, l, g, dE = state
     step = Dynamics(sampler, target, state)
     xx, uu, ll, gg, dEE = step
 
-    return step, (target.inv_transform(xx), dE .+ dEE, -ll)
+    return step, (target.inv_transform(xx), dEE, -ll)
 end
 
 
-function Sample(sampler::EnsembleSampler, target::Target,
-                num_steps::Int, burnin::Int;
-                remove_initial=0,  kwargs...)
+function Sample(sampler::EnsembleSampler, target::Target, num_steps::Int;
+                burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )). It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
@@ -159,27 +164,47 @@ function Sample(sampler::EnsembleSampler, target::Target,
         Returns:
             samples (shape = (num_steps, self.Target.d))
     """
+    
     nchains = sampler.settings.nchains
     target = ParallelTarget(target, nchains)
 
-    state, sample = Init(sampler, target; kwargs...)
-    state, sample = Burnin(sampler, target, state, burnin; kwargs...)
+    io = open(joinpath(fol_name, "VarNames.txt"), "w") do io
+        println(io, string(target.target.vsyms))
+    end       
 
-    d = target.target.d
-    chains = zeros(num_steps, nchains, d+2)
+    state, sample = Init(sampler, target; kwargs...)
+    state, sample = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
+
+    chains = zeros(num_steps, nchains, target.target.d+2)
     X, E, L = sample
     chains[1, :, :] = [X E L]
-    for i in 2:num_steps
-        state, sample = Step(sampler, target, state; kwargs...)
-        X, E, L = sample
-        chains[i, :, :] = [X E L]
+            
+    io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
+        println(io, [X E L])
+        for i in 1:num_steps
+            #try    
+                state, sample = Step(sampler, target, state; kwargs...)
+                X, E, L = sample
+                chains[i, :, :] = [X E L]    
+                println(io, [X E L])
+            #catch
+            #    @warn "Divergence encountered after tuning"
+            #end        
+        end
     end
-
-    return unroll_chains(chains; burnin=remove_initial+1)
+    
+    for i in 1:nchains
+        samples = chains[:, i, :]  
+        io = open(joinpath(fol_name, string(file_name, "_", i, "_summary.txt")), "w") do io
+            ess, rhat = Summarize(samples)
+            println(io, ess)
+            println(io, rhat)
+        end
+    end    
+    return unroll_chains(chains)
 end
 
-function unroll_chains(chains; burnin=1)
-    chains = chains[burnin:end, :, :]
+function unroll_chains(chains)
     nsteps, nchains, nparams = axes(chains)
     chain = []
     for i in nchains

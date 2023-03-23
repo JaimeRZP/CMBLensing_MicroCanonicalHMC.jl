@@ -52,10 +52,10 @@ ParallelTarget(target::Target, nchains) = begin
         return ls , gs
     end
 
-    function prior_draw(key)
+    function prior_draw()
         xs_t = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
-            xs_t[i, :] .= target.prior_draw(key)
+            xs_t[i, :] .= target.prior_draw()
         end
         return xs_t
     end
