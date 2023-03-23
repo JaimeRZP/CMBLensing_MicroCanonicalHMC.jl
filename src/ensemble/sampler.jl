@@ -5,6 +5,7 @@ mutable struct EnsembleSettings
     varE_wanted::Float64
     VarE_maxiter::Int
     num_energy_points::Int
+    tune_maxiter::Int
     integrator::String
     init_eps
     init_L
@@ -20,13 +21,14 @@ EnsembleSettings(;kwargs...) = begin
     varE_wanted = get(kwargs, :varE_wanted, 0.01)
     VarE_maxiter = get(kwargs, :varE_maxiter, 100)
     num_energy_points = get(kwargs, :num_energy_points, 20)
+    tune_maxiter = get(kwargs, :tune_maxiter, 100)
     integrator = get(kwargs, :integrator, "LF")
     init_eps = get(kwargs, :init_eps, nothing)
     init_L = get(kwargs, :init_L, nothing)
     init_sigma = get(kwargs, :init_sigma, nothing)
     EnsembleSettings(nchains, key,
              loss_wanted, varE_wanted, VarE_maxiter, num_energy_points,
-             integrator, init_eps, init_L, init_sigma)
+             tune_maxiter, integrator, init_eps, init_L, init_sigma)
 end
 
 struct EnsembleSampler <: AbstractMCMC.AbstractSampler
@@ -182,25 +184,24 @@ function Sample(sampler::EnsembleSampler, target::Target, num_steps::Int;
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, [X E L])
         for i in 1:num_steps
-            #try    
+            try    
                 state, sample = Step(sampler, target, state; kwargs...)
                 X, E, L = sample
                 chains[i, :, :] = [X E L]    
                 println(io, [X E L])
-            #catch
-            #    @warn "Divergence encountered after tuning"
-            #end        
+            catch
+                @warn "Divergence encountered after tuning"
+            end        
         end
     end
     
-    for i in 1:nchains
-        samples = chains[:, i, :]  
-        io = open(joinpath(fol_name, string(file_name, "_", i, "_summary.txt")), "w") do io
-            ess, rhat = Summarize(samples)
-            println(io, ess)
-            println(io, rhat)
-        end
-    end    
+
+    io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
+        ess, rhat = Summarize(chains)
+        println(io, ess)
+        println(io, rhat)
+    end
+    
     return unroll_chains(chains)
 end
 

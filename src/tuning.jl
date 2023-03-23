@@ -76,7 +76,7 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
         end
         neff = Neff(samples)
         if dialog
-            println(string("samples: ", length(samples), "--> 1/<1/ess>: ", neff))
+            println(string("samples: ", l, "--> 1/<1/ess>: ", neff))
         end
         if l > 10.0 / neff
             sampler.hyperparameters.L = 0.4 * eps / neff # = 0.4 * correlation length
@@ -96,6 +96,58 @@ function tune_sigma!(sampler::Sampler, target::Target; kwargs...)
     sampler.hyperparameters.sigma = sigma
     @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
 end
+    
+
+function Virial_loss(x::AbstractVector, g::AbstractVector)
+"""loss^2 = (1/d) sum_i (virial_i - 1)^2"""
+
+    #should be all close to 1 if we have reached the typical set
+    v = mean(x .* g)  # mean over params
+    return sqrt.((v .- 1.0).^2)
+end
+
+function Step_burnin(sampler::Sampler, target::Target,
+                     init; kwargs...)
+    dialog = get(kwargs, :dialog, false)
+    x, u, l, g, dE = init
+    loss = Virial_loss(x, g)
+    step = Dynamics(sampler, target, init)
+    xx, uu, ll, gg, dEE = step
+    lloss = Virial_loss(xx, gg)
+    if dialog
+        println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
+    end
+
+    no_divergences = isfinite(loss)
+    if no_divergences
+        if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.01)
+            return true, step, [target.inv_transform(xx); dEE; -ll]
+        else
+            return false, step, [target.inv_transform(xx); dEE; -ll]
+        end
+    else
+        @warn "Divergences encountered during burn-in. Reducing eps!"
+        sampler.hyperparameters.eps *= 0.5
+        return false, init, [target.inv_transform(x); dE; -l]
+    end
+end
+
+function Init_burnin(sampler::Sampler, target::Target,
+                     init; kwargs...)
+    dialog = get(kwargs, :dialog, false)
+    x, _, l, g, dE = init
+    v = mean(x .* g, dims=1)
+    loss = mean((1 .- v).^2)
+    sng = -2.0 .* (v .< 1.0) .+ 1.0
+    u = -g ./ sqrt.(sum(g.^2, dims=2))
+    u .*= sng
+
+    if dialog
+        println("Initial Virial loss: ", loss)
+    end
+
+    return  loss, (x, u, l, g, dE), [target.inv_transform(x); dE; -l]
+end    
 
 function dual_averaging(sampler::Sampler, target::Target, init; α=1, kwargs...)
     dialog = get(kwargs, :dialog, false)
@@ -203,11 +255,18 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     
     if burn_in > 0   
-        @info "Starting burn in ⏳"        
+        @info "Starting burn in ⏳" 
+        loss, init, sample = Init_burnin(sampler, target, init; kwargs...)           
         for i in 1:burn_in
-            init, sample = Step(sampler, target, init)
-        end
-        @info "Burn in finished"        
+            finished, init, sample = Step_burnin(sampler, target, init; kwargs...)
+            if finished
+                @info string("Virial loss condition met during burn-in at step: ", i)
+                break
+            end
+            if i == burn_in
+                @warn "Maximum number of steps reached during burn-in"
+            end         
+        end          
     end        
 
     if tune_sigma
@@ -228,7 +287,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
                 end
             end
         end
-            
         if tuning_method=="AdaptiveStep"
             yB = 0.1
             yA = yB * log(sampler.hyperparameters.eps)    
@@ -239,8 +297,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
                    break
                end         
             end
-        end
-            
+        end 
     end
 
     if tune_L

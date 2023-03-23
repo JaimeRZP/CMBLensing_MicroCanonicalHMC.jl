@@ -17,6 +17,7 @@ end
 
 mutable struct Settings
     key::MersenneTwister
+    loss_wanted::Float64
     varE_wanted::Float64
     burn_in::Int
     tune_samples::Int
@@ -31,6 +32,7 @@ Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
     seed = get(kwargs, :seed, 0)
     key = MersenneTwister(seed)
+    loss_wanted = get(kwargs, :loss_wanted, 1.0)
     varE_wanted = get(kwargs, :varE_wanted, 0.2)
     burn_in = get(kwargs, :burn_in, 0)
     tune_samples = get(kwargs, :tune_samples, 1000)
@@ -40,7 +42,7 @@ Settings(;kwargs...) = begin
     init_L = get(kwargs, :init_L, nothing)
     init_sigma = get(kwargs, :init_sigma, nothing)
     Settings(key,
-             varE_wanted, burn_in, tune_samples, tune_maxiter,
+             loss_wanted, varE_wanted, burn_in, tune_samples, tune_maxiter,
              integrator, init_eps, init_L, init_sigma)
 end
 
