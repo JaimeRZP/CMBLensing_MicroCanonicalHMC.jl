@@ -60,6 +60,7 @@ function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs.
     d = target.target.d  
     
     steps = 10 .^ (LinRange(2, log10(2500), sett.tune_maxiter))
+    steps /= nchains
     steps = Int.(round.(steps))
     chains = zeros(sum(steps), nchains, d+2)
     l = 0
@@ -70,12 +71,12 @@ function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs.
             X, E, L = sample
             chains[i, :, :] = [X E L]
         end
-        neffs = Neff(chains)
+        neffs = Neff(chains, l*nchains)
         neff = mean(neffs)
         if dialog
-            println(string("samples: ", l, "--> 1/<1/ess>: ", neff))
+            println(string("samples: ", l*nchains, "--> 1/<1/ess>: ", neff))
         end
-        if l > 10.0 / neff
+        if (l*nchains) > (10.0/neff)
             sampler.hyperparameters.L = 0.4 * eps / neff # = 0.4 * correlation length
             @info string("Found L: ", sampler.hyperparameters.L, " ✅")
             break
@@ -226,27 +227,19 @@ function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init;                                 burn_in::Int=0, kwargs...)
+function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init;
+                              burn_in::Int=0, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     d = target.target.d
 
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
-        
-     
-    if tune_sigma
-        xs, _, _, _, _ = init
-        sigma = vec(std(xs, dims=1))
-        sampler.hyperparameters.sigma = sigma
-        if dialog
-            println(string("Initial sigma: ", sigma))
-        end
-    end    
     
     if burn_in > 0
         @info "Starting burn in ⏳" 
-        loss, init, sample = Init_burnin(sampler, target, init; kwargs...)    
+        loss, init, sample = Init_burnin(sampler, target, init; kwargs...) 
+        xs, _, _, _, _ = init
         for i  in 1:burn_in
             finished, init, sample = Step_burnin(sampler, target, init; kwargs...)
             if tune_sigma

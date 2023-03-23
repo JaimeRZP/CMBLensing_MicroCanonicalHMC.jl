@@ -46,16 +46,15 @@ function tune_what(sampler::Sampler, target::Target)
 end
 
 function Summarize(samples::AbstractVector)
-    _samples = zeros(length(samples), length(samples[1]), 1)
-    _samples[:, :, 1] = mapreduce(permutedims, vcat, samples)
-    _samples = permutedims(_samples, (1,3,2))
+    _samples = zeros(length(samples), 1, length(samples[1]))
+    _samples[:, 1, :] = mapreduce(permutedims, vcat, samples)
     ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
     return ess, rhat
 end
 
-function Neff(samples)
+function Neff(samples, l::Int)
     ess, rhat = Summarize(samples)
-    neff = ess ./ length(samples)
+    neff = ess ./ l
     return 1.0 / mean(1 ./ neff)
 end
 
@@ -74,11 +73,11 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
             init, sample = Step(sampler, target, init; monitor_energy=true)
             push!(samples, sample)
         end
-        neff = Neff(samples)
+        neff = Neff(samples, l)
         if dialog
             println(string("samples: ", l, "--> 1/<1/ess>: ", neff))
         end
-        if l > 10.0 / neff
+        if l > (10.0/neff)
             sampler.hyperparameters.L = 0.4 * eps / neff # = 0.4 * correlation length
             @info string("Found L: ", sampler.hyperparameters.L, " ✅")
             break
@@ -86,17 +85,13 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
     end
 end
 
-function tune_sigma!(sampler::Sampler, target::Target; kwargs...)
+function get_Hessian_precond(sampler::Sampler, target::Target; kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     MAP_t = target.MAP_t
     Hess = target.hess_nlogp(MAP_t)
-    mass_mat = pinv(Hess)
-    sigma = sqrt.(diag(mass_mat))
-    sampler.hyperparameters.sigma = sigma
-    @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")
+    return pinv(Hess)
 end
-    
 
 function Virial_loss(x::AbstractVector, g::AbstractVector)
 """loss^2 = (1/d) sum_i (virial_i - 1)^2"""
@@ -256,9 +251,11 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
     
     if burn_in > 0   
         @info "Starting burn in ⏳" 
-        loss, init, sample = Init_burnin(sampler, target, init; kwargs...)           
+        loss, init, sample = Init_burnin(sampler, target, init; kwargs...)
+        samples = []        
         for i in 1:burn_in
             finished, init, sample = Step_burnin(sampler, target, init; kwargs...)
+            push!(samples, sample)        
             if finished
                 @info string("Virial loss condition met during burn-in at step: ", i)
                 break
@@ -266,7 +263,13 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
             if i == burn_in
                 @warn "Maximum number of steps reached during burn-in"
             end         
-        end          
+        end
+        if tune_sigma
+            sigma = std(samples, dims=1)
+            sigma ./= sqrt(sum(sigma.^2))        
+            sampler.hyperparameters.sigma = sigma
+            @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")        
+        end            
     end        
 
     if tune_sigma
