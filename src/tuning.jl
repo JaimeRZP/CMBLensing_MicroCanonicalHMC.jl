@@ -18,7 +18,7 @@ function tune_what(sampler::Sampler, target::Target)
         @info "Tuning eps ⏳"
         tune_eps = true
         if sampler.settings.init_eps == nothing
-            init_eps = 0.5#*sqt(d)
+            init_eps = 0.5
         else
             init_eps = sampler.settings.init_eps
         end
@@ -41,7 +41,8 @@ function tune_what(sampler::Sampler, target::Target)
     end
 
     tune_nu!(sampler, target)
-
+    @info string("Initial nu ", sampler.hyperparameters.nu)
+    
     return tune_sigma, tune_eps, tune_L
 end
 
@@ -104,27 +105,10 @@ end
 function Step_burnin(sampler::Sampler, target::Target,
                      init; kwargs...)
     dialog = get(kwargs, :dialog, false)
-    x, u, l, g, dE = init
-    loss = Virial_loss(x, g)
     step = Dynamics(sampler, target, init)
     xx, uu, ll, gg, dEE = step
-    lloss = Virial_loss(xx, gg)
-    if dialog
-        println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
-    end
-
-    no_divergences = isfinite(loss)
-    if no_divergences
-        if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.01)
-            return true, step, [target.inv_transform(xx); dEE; -ll]
-        else
-            return false, step, [target.inv_transform(xx); dEE; -ll]
-        end
-    else
-        @warn "Divergences encountered during burn-in. Reducing eps!"
-        sampler.hyperparameters.eps *= 0.5
-        return false, init, [target.inv_transform(x); dE; -l]
-    end
+    lloss = Virial_loss(xx, gg)    
+    return lloss, step, [target.inv_transform(xx); dEE; -ll]
 end
 
 function Init_burnin(sampler::Sampler, target::Target,
@@ -134,7 +118,7 @@ function Init_burnin(sampler::Sampler, target::Target,
     v = mean(x .* g, dims=1)
     loss = mean((1 .- v).^2)
     sng = -2.0 .* (v .< 1.0) .+ 1.0
-    u = -g ./ sqrt.(sum(g.^2, dims=2))
+    u = -g ./ sqrt.(sum(g.^2))
     u .*= sng
 
     if dialog
@@ -254,27 +238,34 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
         loss, init, sample = Init_burnin(sampler, target, init; kwargs...)
         samples = []        
         for i in 1:burn_in
-            finished, init, sample = Step_burnin(sampler, target, init; kwargs...)
-            push!(samples, sample)        
-            if finished
-                @info string("Virial loss condition met during burn-in at step: ", i)
-                break
-            end
+            lloss, step, sample = Step_burnin(sampler, target, init; kwargs...)        
+            if lloss < loss
+                if dialog
+                    println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
+                end    
+                push!(samples, sample)        
+                if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.01)
+                    @info string("Virial loss condition met during burn-in at step: ", i)
+                    break
+                end
+                loss = lloss
+                init = step
+            else      
+                x, u, l, g, dE = init         
+                uu = Partially_refresh_momentum(sampler, target, u)           
+                init = (x, uu, l, g, dE)          
+            end        
             if i == burn_in
                 @warn "Maximum number of steps reached during burn-in"
             end         
         end
         if tune_sigma
-            sigma = std(samples, dims=1)
+            sigma = std(samples)[1:end-2]
             sigma ./= sqrt(sum(sigma.^2))        
             sampler.hyperparameters.sigma = sigma
             @info string("Found sigma: ", sampler.hyperparameters.sigma, " ✅")        
         end            
     end        
-
-    if tune_sigma
-        tune_sigma!(sampler, target; kwargs...)
-    end
 
     if tune_eps
         tuning_method = get(kwargs, :tuning_method, "AdaptiveStep")
@@ -308,6 +299,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
     end
 
     tune_nu!(sampler, target)
+    @info string("Final nu ", sampler.hyperparameters.nu)        
      
     return init    
 end

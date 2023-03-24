@@ -74,12 +74,8 @@ function MCHMC(; kwargs...)
     return MCHMC(0.0, 0.0; kwargs...)
 end
 
-function Random_unit_vector(target::Target)
-    """Generates a random (isotropic) unit vector."""
-    return Random_unit_vector(target.d)
-end
-
 function Random_unit_vector(d)
+    """Generates a random (isotropic) unit vector."""    
     u = randn(d)
     u ./= sqrt(sum(u.^2))
     return u
@@ -98,21 +94,14 @@ function Partially_refresh_momentum(nu, d, u::AbstractVector)
     return uu
 end
 
-function Update_momentum(target::Target, eff_eps::Number,
-                         g::AbstractVector, u::AbstractVector)
-    # TO DO: type inputs
-    # Have to figure out where and when to define target
-    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
-    Update_momentum(target.d, eff_eps::Number, g ,u)
-end
-
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
-    g_norm = sqrt(sum(g .^2 ))
+    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
+    g_norm = sqrt(sum(g.^2))
     e = - g ./ g_norm
     delta = eff_eps * g_norm / (d-1)
-    ue = dot(u, e)
-
+    ue = dot(u, e)    
+        
     #=
     sh = sinh(delta)
     ch = cosh(delta)
@@ -125,8 +114,8 @@ function Update_momentum(d::Number, eff_eps::Number,
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
     uu ./= sqrt(sum(uu.^2))
-    delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)
-
+            
+    delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
     return uu, delta_r
 end
 
@@ -136,7 +125,7 @@ function Dynamics(sampler::Sampler, target::Target, state)
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
     # add noise to the momentum direction
-    uuu = Partially_refresh_momentum(sampler, target, uu)
+    uuu = Partially_refresh_momentum(sampler, target, uu)   
     dEE = kinetic_change + ll - l
     return xx, uuu, ll, gg, dEE
 end
@@ -163,7 +152,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     end
     l, g = target.nlogp_grad_nlogp(x)
     g .*= d/(d-1)
-    u = Random_unit_vector(target) #random initial direction
+    u = Random_unit_vector(d) #random initial direction
 
     sample = [target.inv_transform(x); 0.0; -l]
     state = (x, u, l, g, 0.0)

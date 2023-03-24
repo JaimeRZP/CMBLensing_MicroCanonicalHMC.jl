@@ -118,6 +118,7 @@ end
 
 mutable struct CustomTarget <: Target
     d::Int
+    vsyms                                                            
     nlogp::Function
     grad_nlogp::Function
     transform::Function
@@ -127,11 +128,7 @@ end
 
 CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
     d = length(priors)
-
-    #function transform(xs)
-    #    xxs = [Bijectors.invlink(dist, x) for (dist, x) in zip(priors, xs)]
-    #    return xxs
-    #end
+    vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d]
 
     function transform(x)
         xt = x
@@ -159,6 +156,7 @@ end
 
 mutable struct GaussianTarget <: Target
     d::Int
+    vsyms                                                                                    
     nlogp::Function
     grad_nlogp::Function
     nlogp_grad_nlogp::Function
@@ -169,6 +167,7 @@ end
 
 GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
     d = length(_mean)
+    vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d]                                                                     
     _gaussian = MvNormal(_mean, _cov)
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
@@ -205,6 +204,7 @@ GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
     end
 
     GaussianTarget(d,
+    vsyms,                                                                                                                    
     nlogp,
     grad_nlogp,
     nlogp_grad_nlogp,
