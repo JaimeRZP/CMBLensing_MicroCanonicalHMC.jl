@@ -301,5 +301,5 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
     tune_nu!(sampler, target)
     @info string("Final nu ", sampler.hyperparameters.nu)        
      
-    return init    
+    return init, sample  
 end

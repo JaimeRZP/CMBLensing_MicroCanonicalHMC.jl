@@ -182,7 +182,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     end        
 
     state, sample = Init(sampler, target; kwargs...)
-    state = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
+    state, sample = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
 
     samples = []
     push!(samples, sample)
