@@ -1,4 +1,4 @@
-# MCHMC.jl
+# MicroCanonicalHMC.jl
 
 [![Build Status](https://github.com/JaimeRZP/MCHMC.jl/workflows/CI/badge.svg)](https://github.com/JaimeRZP/MicroCanonicalHMC.jl/actions?query=workflow%3AMCHMC-CI+branch%3Amaster)
 [![Dev](https://img.shields.io/badge/docs-dev-blue.svg)](https://jaimerzp.github.io/MicroCanonicalHMC.jl/dev/)
