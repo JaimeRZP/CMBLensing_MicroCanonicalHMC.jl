@@ -13,9 +13,9 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
 
     if resume_from === nothing
         target = TuringTarget(model)
-        init = Init(sampler, target; kwargs...)
-        state, sample = init
-        tune_hyperparameters(sampler, target, state; kwargs...)
+        state, sample = Init(sampler, target; kwargs...)
+        state, sample = tune_hyperparameters(sampler, target, state; kwargs...)
+        init = (state, sample)
     else
         @info "Starting from previous run"
         target = resume_from.info[:target]
