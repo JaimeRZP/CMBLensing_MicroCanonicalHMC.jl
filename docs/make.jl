@@ -1,10 +1,10 @@
 # make.jl
-using Documenter, GaussianProcess
+using Documenter, MicroCanonicalHMC
 
 makedocs(sitename = "MicroCanonicalHMC.jl",
-         modules = [MiCroCanonicalHMC],
+         modules = [MicroCanonicalHMC],
          pages = ["Home" => "index.md",
                   "API" => "api.md"])
 deploydocs(
-    repo = "github.com/JaimeRZP/MicroCanonicalHMC.jl"
+    repo = "github.com/JaimeRZP/MicroCanonicalHCM.jl"
 )
