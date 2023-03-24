@@ -46,14 +46,14 @@ ParallelTarget(target::Target, nchains) = begin
         ls = Vector{Real}(undef, nchains)
         gs = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
-            ls[i] = target.nlogp(xs_t[i, :])
-            gs[i, :] .= target.grad_nlogp(xs_t[i, :])
+            ls[i], = target.nlogp(xs_t[i, :])
+            gs[i, :] = target.grad_nlogp(xs_t[i, :])
         end
-        return ls, gs
+        return ls , gs
     end
 
     function prior_draw()
-        xs_t = Matrix{Float64}(undef, nchains, d)
+        xs_t = Matrix{Real}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
             xs_t[i, :] .= target.prior_draw()
         end

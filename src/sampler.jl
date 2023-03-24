@@ -16,13 +16,12 @@ Hyperparameters(;kwargs...) = begin
 end
 
 mutable struct Settings
-    key::MersenneTwister
+    nchains::Int
+    integrator::String
     loss_wanted::Float64
     varE_wanted::Float64
-    burn_in::Int
-    tune_samples::Int
-    tune_maxiter::Int
-    integrator::String
+    tune_eps_nsteps::Int
+    tune_L_nsteps::Int
     init_eps
     init_L
     init_sigma
@@ -30,20 +29,19 @@ end
 
 Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
-    seed = get(kwargs, :seed, 0)
-    key = MersenneTwister(seed)
-    loss_wanted = get(kwargs, :loss_wanted, 1.0)
-    varE_wanted = get(kwargs, :varE_wanted, 0.2)
-    burn_in = get(kwargs, :burn_in, 0)
-    tune_samples = get(kwargs, :tune_samples, 1000)
-    tune_maxiter = get(kwargs, :tune_maxiter, 100)
+    
+    nchains = get(kwargs, :nchains, 1)
     integrator = get(kwargs, :integrator, "LF")
+    loss_wanted = get(kwargs, :loss_wanted, 1.0)
+    varE_wanted = get(kwargs, :varE_wanted, 0.001)
+    tune_eps_nsteps = get(kwargs, :tune_eps_nsteps, 100)
+    tune_L_nsteps = get(kwargs, :tune_nsteps, 2500)
     init_eps = get(kwargs, :init_eps, nothing)
     init_L = get(kwargs, :init_L, nothing)
     init_sigma = get(kwargs, :init_sigma, nothing)
-    Settings(key,
-             loss_wanted, varE_wanted, burn_in, tune_samples, tune_maxiter,
-             integrator, init_eps, init_L, init_sigma)
+    Settings(nchains, integrator,
+             loss_wanted, varE_wanted, tune_eps_nsteps, tune_L_nsteps,
+             init_eps, init_L, init_sigma)
 end
 
 struct Sampler <: AbstractMCMC.AbstractSampler
@@ -182,7 +180,8 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     end        
 
     state, sample = Init(sampler, target; kwargs...)
-    state, sample = tune_hyperparameters(sampler, target, state; burn_in=burn_in, kwargs...)
+    state, sample = tune_hyperparameters(sampler, target, state, sample;
+                                         burn_in=burn_in, kwargs...)
 
     samples = []
     push!(samples, sample)

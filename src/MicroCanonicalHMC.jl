@@ -6,10 +6,10 @@ export Summarize
 export TuringTarget, GaussianTarget, RosenbrockTarget, CustomTarget
 export ParallelTarget
 
-using LinearAlgebra, Statistics, Random, DataFrames
-using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff
+using Interpolations, LinearAlgebra, Statistics, Random, DataFrames
+using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
 using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed, Optim
-using Distributions, DistributionsAD
+using BlockDiagonals, Distributions, DistributionsAD
 
 abstract type Target <: AbstractMCMC.AbstractModel end
 

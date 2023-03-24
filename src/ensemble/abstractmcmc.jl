@@ -20,7 +20,6 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
         sampler = resume_from.info[:sampler]
         init = resume_from.info[:init]
     end
-    println("Hello")
     return AbstractMCMC.mcmcsample(target, sampler, init, N; kwargs...)
 end
 
@@ -39,7 +38,7 @@ function AbstractMCMC.mcmcsample(target::ParallelTarget,
     # Check the number of requested samples.
     N > 0 || error("the number of samples must be ≥ 1")
     Ntotal = thinning * (N - 1) + burn_in + 1
-    println("World")
+
     # Start the timer
     start = time()
     local state
