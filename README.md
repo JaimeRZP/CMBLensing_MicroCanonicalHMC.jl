@@ -55,11 +55,16 @@ samples_mchmc_ensemble = Sample(ensemble_spl, target, 50_000; burn_in=5_000, dia
 ### Compare to NUTS
 
 ```julia
-samples_hmc = sample(funnel_model, NUTS(5_000, 0.95), 50_000, progress=true; save_state=true)
+samples_hmc = sample(funnel_model, NUTS(5_000, 0.95), 50_000; progress=true, save_state=true)
 ```
 
 ![](https://raw.githubusercontent.com/JaimeRZP/MicroCanonicalHMC.jl/master/docs/src/assets/Neal_funnel_comp.png)
 
 
+## Using MicroCanonicalHMC.jl with AbstractMCMC.jl
 
+```julia
+samples_hmc = sample(funnel_model, spl, 50_000; progress=true, save_state=true)
+```
 
+Note that we are passing the `Turing` model directly instead of the `Target` object
