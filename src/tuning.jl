@@ -64,7 +64,7 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
     sett = sampler.settings
     eps = sampler.hyperparameters.eps
     
-    steps = 10 .^ (LinRange(2, log10(2500), sett.tune_maxiter))
+    steps = 10 .^ (LinRange(2, log10(sett.tune_L_nsteps), 20))
     steps = Int.(round.(steps))
     samples = []
     l = 0
@@ -135,7 +135,7 @@ function dual_averaging(sampler::Sampler, target::Target, init; α=1, kwargs...)
     varE_wanted = sett.varE_wanted
 
     samples = []
-    for i in 1:sett.tune_samples
+    for i in 1:20
         init, sample = Step(sampler, target, init)
         push!(samples, sample)
     end
@@ -225,7 +225,7 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, init;
+function tune_hyperparameters(sampler::Sampler, target::Target, init, sample;
                               burn_in::Int=0, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
@@ -273,7 +273,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
             println(string("Using eps tuning method ", tuning_method))        
         end        
         if tuning_method=="DualAveraging"    
-            for i in 1:sett.tune_maxiter
+            for i in 1:sett.tune_eps_nsteps
                 success = dual_averaging(sampler, target, init;
                                          α=exp.(-(i .- 1)/20), kwargs...)
                 if success
@@ -285,7 +285,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init;
             yB = 0.1
             yA = yB * log(sampler.hyperparameters.eps)    
             tuning_init = (init, yA, yB, Inf)    
-            for i in 1:sett.tune_maxiter
+            for i in 1:sett.tune_eps_nsteps
                success, tuning_init = adaptive_step(sampler, target, tuning_init; kwargs...)
                if success
                    break
