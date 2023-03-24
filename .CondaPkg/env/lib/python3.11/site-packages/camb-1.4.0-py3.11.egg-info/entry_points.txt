@@ -1,2 +1,0 @@
-[console_scripts]
-camb = camb._command_line:run_command_line
