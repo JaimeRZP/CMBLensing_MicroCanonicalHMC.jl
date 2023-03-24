@@ -5,16 +5,15 @@ end
 
 function AbstractMCMC.sample(model::DynamicPPL.Model,
                              sampler::EnsembleSampler,
-                             N::Int,
-                             burnin::Int;
+                             N::Int;
                              resume_from=nothing,
                              kwargs...)
 
     if resume_from === nothing
         target = ParallelTarget(TuringTarget(model), sampler.settings.nchains)
-        init = Init(sampler, target; kwargs...)
-        state, sample = init
-        init = Burnin(sampler, target, state, burnin; kwargs...)
+        state, sample = Init(sampler, target; kwargs...)
+        state, sample = tune_hyperparameters(sampler, target, state; kwargs...)
+        init = (state, sample)
     else
         @info "Starting from previous run"
         target = resume_from.info[:target]
