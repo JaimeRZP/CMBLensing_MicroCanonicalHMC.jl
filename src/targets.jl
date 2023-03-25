@@ -48,7 +48,7 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
     ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
 
     function _reshape_params(x::AbstractVector)
-        xx = []
+        xx = []               
         idx = 0
         for dist_length in dist_lengths
             append!(xx, [x[idx+1:idx+dist_length]])

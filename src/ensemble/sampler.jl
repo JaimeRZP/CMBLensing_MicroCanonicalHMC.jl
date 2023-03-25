@@ -102,6 +102,7 @@ function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     d = target.target.d
     ### initial conditions ###
     if :initial_x ∈ keys(kwargs)
+        @info "Using provided initial point"    
         x = target.transform(kwargs[:initial_x])
     else
         x = target.prior_draw()

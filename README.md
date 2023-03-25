@@ -52,6 +52,34 @@ samples_mchmc = Sample(spl, target, 50_000; burn_in=5_000, dialog=false)
 samples_mchmc_ensemble = Sample(ensemble_spl, target, 50_000; burn_in=5_000, dialog=false)
 ```
 
+if you wish to start from a given point, use the `intial_x` key argument as:
+
+```julia
+initial_x = zeros(21)
+samples_mchmc = Sample(spl, target, 50_000;
+                       initial_x = initial_x, #If you wish to start from a given point
+                       burn_in=5_000, dialog=false);
+
+initial_x = zeros(10, 21)    
+samples_mchmc_ensemble = Sample(ensemble_spl, target, 5_000;
+                       initial_x = initial_x, #If you wish to start from a given point
+                       burn_in=500, dialog=false);
+
+```
+
+Be mindful that burn in will be happen if `burn_in != 0`.
+
+Note that the ensemble sampler is inherently parallelized. Nonetheless, one can also use the sequential sampler in parallel as:
+```julia
+@threads :static for i in 1:nchains    
+    file_name = string("chain_", i)
+    samples= Sample(spl, target, 5_000;
+                    burn_in=500, file_name=file_name, dialog=false)
+end    
+```
+
+To restart the chain simply provide the last sample as `initial_x`.
+
 ### Compare to NUTS
 
 ```julia
@@ -66,8 +94,25 @@ samples_hmc = sample(funnel_model, NUTS(5_000, 0.95), 50_000; progress=true, sav
 
 ## Using MicroCanonicalHMC.jl with AbstractMCMC.jl
 
+
 ```julia
-samples_hmc = sample(funnel_model, spl, 50_000; progress=true, save_state=true)
+samples_mchmc = sample(funnel_model, spl, 5_000; burn_in=500, progress=true, save_state=true)
+samples_mchmc_ensemble = sample(funnel_model, ensemble_spl, 5_000; burn_in=500, progress=true, save_state=true)
 ```
 
 Note that we are passing the `Turing` model directly instead of the `Target` object.
+
+To restart a chain using the `AbstractMCMC.jl` interface do:
+
+```julia
+new_samples_mchmc = sample(funnel_model, spl, 1_000; progress=true, resume_from=samples_mchmc)
+new_samples_mchmc = sample(funnel_model, ensemble_spl, 1_000; progress=true, resume_from=samples_mchmc)
+```
+
+The user can also use the `AbstractMCMC.jl` interface to parallelize the sequential sampler as:
+
+```julia
+samples_mchmc = sample(funnel_model, spl, MCMCThreads(), 5_000, 10; dialog=true)
+
+```
+
