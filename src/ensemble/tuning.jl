@@ -69,7 +69,7 @@ function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init::Ensembl
         l += s 
         for i in 1:s
             init = Step(sampler, target, init; kwargs...)
-            sample = [init.x init.dE -init.l]
+            sample = [init.x, init.dE, -init.l]
             chains[i, :, :] = sample
         end
         neffs = Neff(chains, l*nchains)
@@ -170,9 +170,8 @@ function adaptive_step(sampler::EnsembleSampler, target::ParallelTarget, init;
     varE_wanted = sett.varE_wanted
     d = target.target.d
     
-    step, Feps, Weps, max_eps = init    
+    step, yA, yB, max_eps = init    
     step = Step(sampler, target, step)
-
     varE = mean(step.dE.^2)/d
     if dialog
         println("eps: ", eps, " --> VarE/d: ", varE)
@@ -181,18 +180,19 @@ function adaptive_step(sampler::EnsembleSampler, target::ParallelTarget, init;
     no_divergences = isfinite(varE)
     if no_divergences    
         success = (abs(varE-varE_wanted)/varE_wanted) < 0.05 
-        if !success  
-            xi = varE/varE_wanted + 1e-8   
-            w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
+        if !success
+            y = yA/yB    
+            xi = -log(varE/varE_wanted + 1e-8) / 6   
+            w = exp(-0.5*(xi/sigma_xi)^2)
             # Kalman update the linear combinations
-            Feps = gamma * Feps + w * (xi/eps^6)  
-            Weps = gamma * Weps + w
-            new_eps = (Feps/Weps)^(-1/6)
+            yA = gamma * yA + w * (xi + y) 
+            yB = gamma * yB + w
+            new_log_eps = yA/yB
 
-            if new_eps > max_eps
+            if exp(new_log_eps) > max_eps
                 sampler.hyperparameters.eps = max_eps
             else
-                sampler.hyperparameters.eps = new_eps        
+                sampler.hyperparameters.eps = exp(new_log_eps)        
             end
         else
             @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
@@ -203,7 +203,7 @@ function adaptive_step(sampler::EnsembleSampler, target::ParallelTarget, init;
         sampler.hyperparameters.eps = 0.5 * eps    
     end
         
-    return success, (step, Feps, Weps, max_eps)    
+    return success, (step, yA, yB, max_eps)    
 end        
 
 function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
@@ -270,9 +270,9 @@ function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, 
             end                
         end
         if tuning_method=="AdaptiveStep"
-            Weps = 1e-5
-            Feps = Weps * sampler.hyperparameters.eps^(1/6)    
-            tuning_init = (init, Feps, Weps, Inf)    
+            yB = 0.1
+            yA = yB * log(sampler.hyperparameters.eps)    
+            tuning_init = (init, yA, yB, Inf)    
             for i in 1:sett.tune_eps_nsteps
                success, tuning_init = adaptive_step(sampler, target, tuning_init; kwargs...)
                if success
