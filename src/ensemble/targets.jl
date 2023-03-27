@@ -11,7 +11,7 @@ end
 ParallelTarget(target::Target, nchains) = begin
     d = target.d
     function transform(xs)
-        xs_t = Matrix{Real}(undef, nchains, d)
+        xs_t = Matrix{eltype(xs)}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
             xs_t[i, :] .= target.transform(xs[i, :])
         end
@@ -19,7 +19,7 @@ ParallelTarget(target::Target, nchains) = begin
     end
 
     function inv_transform(xs_t)
-        xs = Matrix{Real}(undef, nchains, d)
+        xs = Matrix{eltype(xs_t)}(undef, nchains, d)
         @inbounds Threads.@threads :static for i in 1:nchains
             xs[i, :] .= target.inv_transform(xs_t[i, :])
         end
