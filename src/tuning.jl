@@ -71,7 +71,8 @@ function tune_L!(sampler::Sampler, target::Target, init; kwargs...)
     for s in steps
         l += s
         for i in 1:s
-            init, sample = Step(sampler, target, init; monitor_energy=true)
+            init = Step(sampler, target, init)
+            sample = [target.inv_transform(init.x); init.dE; -init.l] 
             push!(samples, sample)
         end
         neff = Neff(samples, l)
@@ -102,19 +103,21 @@ function Virial_loss(x::AbstractVector, g::AbstractVector)
     return sqrt.((v .- 1.0).^2)
 end
 
-function Step_burnin(sampler::Sampler, target::Target,
-                     init; kwargs...)
+function Step_burnin(sampler::Sampler, target::Target, init::State; kwargs...)
     dialog = get(kwargs, :dialog, false)
-    step = Dynamics(sampler, target, init)
-    xx, uu, ll, gg, dEE = step
-    lloss = Virial_loss(xx, gg)    
-    return lloss, step, [target.inv_transform(xx); dEE; -ll]
+    step = Step(sampler, target, init)
+    lloss = Virial_loss(step.x, step.g)    
+    return lloss, step
 end
 
 function Init_burnin(sampler::Sampler, target::Target,
-                     init; kwargs...)
+                     init::State; kwargs...)
     dialog = get(kwargs, :dialog, false)
-    x, _, l, g, dE = init
+    x = init.x
+    l = init.l
+    g = init.g
+    dE = init.dE
+        
     v = mean(x .* g, dims=1)
     loss = mean((1 .- v).^2)
     sng = -2.0 .* (v .< 1.0) .+ 1.0
@@ -125,7 +128,7 @@ function Init_burnin(sampler::Sampler, target::Target,
         println("Initial Virial loss: ", loss)
     end
 
-    return  loss, (x, u, l, g, dE), [target.inv_transform(x); dE; -l]
+    return  loss, State(x, u, l, g, dE)
 end    
 
 function dual_averaging(sampler::Sampler, target::Target, init; α=1, kwargs...)
@@ -177,9 +180,9 @@ function adaptive_step(sampler::Sampler, target::Target, init;
     d = target.d
     
     step, yA, yB, max_eps = init    
-    step, _ = Step(sampler, target, step)
-    xx, uu, ll, gg, dEE = step
-    varE = dEE^2/d
+    step = Step(sampler, target, step)
+
+    varE = step.dE^2/d
     if dialog
         println("eps: ", eps, " --> VarE/d: ", varE)
     end    
@@ -225,20 +228,20 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, init, sample;
+function tune_hyperparameters(sampler::Sampler, target::Target, init::State;
                               burn_in::Int=0, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings    
+    sett = sampler.settings  
 
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     
     if burn_in > 0   
         @info "Starting burn in ⏳" 
-        loss, init, sample = Init_burnin(sampler, target, init; kwargs...)
+        loss, init = Init_burnin(sampler, target, init; kwargs...)
         samples = []        
         for i in 1:burn_in
-            lloss, step, sample = Step_burnin(sampler, target, init; kwargs...)        
+            lloss, step = Step_burnin(sampler, target, init; kwargs...)        
             if lloss < loss
                 if dialog
                     println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
@@ -250,10 +253,9 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init, sample;
                 end
                 loss = lloss
                 init = step
-            else      
-                x, u, l, g, dE = init         
-                uu = Partially_refresh_momentum(sampler, target, u)           
-                init = (x, uu, l, g, dE)          
+            else              
+                uu = Partially_refresh_momentum(sampler, target, init.u)           
+                init = State(init.x, uu, init.l, init.g, init.dE)          
             end        
             if i == burn_in
                 @warn "Maximum number of steps reached during burn-in"
@@ -301,5 +303,5 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init, sample;
     tune_nu!(sampler, target)
     @info string("Final nu ", sampler.hyperparameters.nu)        
      
-    return init, sample  
+    return init
 end

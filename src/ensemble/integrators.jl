@@ -1,9 +1,7 @@
-function Leapfrog(sampler::EnsembleSampler, target::ParallelTarget,
-                  x::AbstractMatrix, u::AbstractMatrix,
-                  l::AbstractVector, g::AbstractMatrix)
+function Leapfrog(sampler::EnsembleSampler, target::ParallelTarget, state::EnsembleState)
     eps = sampler.hyperparameters.eps
     sigma = sampler.hyperparameters.sigma
-    return Leapfrog(target, eps, sigma, x, u, l, g)
+    return Leapfrog(target, eps, sigma, state.x, state.u, state.l, state.g)
 end
 
 function Leapfrog(target::ParallelTarget,
@@ -30,16 +28,14 @@ function Leapfrog(target::ParallelTarget,
     return xx, uu, ll, gg, kinetic_change
 end
 
-function Minimal_norm(sampler::EnsembleSampler, target::ParallelTarget,
-                      x::AbstractMatrix, u::AbstractMatrix,
-                      l::AbstractVector, g::AbstractMatrix)
+function Minimal_norm(sampler::EnsembleSampler, target::ParallelTarget, state::EnsembleState)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
     eps = sampler.hyperparameters.eps
     lambda_c = sampler.hyperparameters.lambda_c
     sigma = sampler.hyperparameters.sigma
 
-    return Minimal_norm(target, eps, lambda_c, x, u, l, g)
+    return Minimal_norm(target, eps, lambda_c, state.x, state.u, state.l, state.g)
 end
 
 function Minimal_norm(target::ParallelTarget,

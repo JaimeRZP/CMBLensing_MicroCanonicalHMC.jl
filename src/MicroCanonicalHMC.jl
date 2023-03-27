@@ -1,15 +1,14 @@
 module MicroCanonicalHMC
 
-export Settings, Hyperparameters, MCHMC, Sample
-export Leapfrog, Minimal_norm
+export Settings, MCHMC, Sample
 export Summarize
 export TuringTarget, GaussianTarget, RosenbrockTarget, CustomTarget
 export ParallelTarget
 
-using Interpolations, LinearAlgebra, Statistics, Random, DataFrames
-using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff, Zygote
+using LinearAlgebra, Statistics, Random, DataFrames
+using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff
 using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed, Optim
-using BlockDiagonals, Distributions, DistributionsAD
+using Distributions, DistributionsAD
 
 abstract type Target <: AbstractMCMC.AbstractModel end
 

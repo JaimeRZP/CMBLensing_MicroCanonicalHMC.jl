@@ -52,7 +52,7 @@ function Summarize(samples::AbstractArray)
     return ess, rhat
 end
 
-function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs...)
+function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init::EnsembleState; kwargs...)
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings
     eps = sampler.hyperparameters.eps
@@ -68,9 +68,9 @@ function tune_L!(sampler::EnsembleSampler, target::ParallelTarget, init; kwargs.
     for s in steps
         l += s 
         for i in 1:s
-            init, sample = Step(sampler, target, init; kwargs...)
-            X, E, L = sample
-            chains[i, :, :] = [X E L]
+            init = Step(sampler, target, init; kwargs...)
+            sample = [init.x, init.dE, -init.l]
+            chains[i, :, :] = sample
         end
         neffs = Neff(chains, l*nchains)
         neff = mean(neffs)
@@ -94,18 +94,21 @@ function Virial_loss(x::AbstractMatrix, g::AbstractMatrix)
 end
 
 function Step_burnin(sampler::EnsembleSampler, target::ParallelTarget,
-                     init; kwargs...)
+                     init::EnsembleState; kwargs...)
     dialog = get(kwargs, :dialog, false)
-    step = Dynamics(sampler, target, init)
-    xx, uu, ll, gg, dEE = step
-    lloss = Virial_loss(xx, gg)
-    return lloss, step, (target.inv_transform(xx), dEE, -ll)
+    step = Step(sampler, target, init)
+    lloss = Virial_loss(step.x, step.g)
+    return lloss, step
 end
 
 function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
                      init; kwargs...)
     dialog = get(kwargs, :dialog, false)
-    x, _, l, g, dE = init
+    x = init.x
+    l = init.l
+    g = init.g
+    dE = init.dE    
+        
     v = mean(x .* g, dims=1)
     loss = mean((1 .- v).^2)
     sng = -2.0 .* (v .< 1.0) .+ 1.0
@@ -116,7 +119,7 @@ function Init_burnin(sampler::EnsembleSampler, target::ParallelTarget,
         println("Initial Virial loss: ", loss)
     end
 
-    return  loss, (x, u, l, g, dE), (target.inv_transform(x), dE, -l)
+    return  loss, EnsembleState(x, u, l, g, dE)
 end
 
 function dual_averaging(sampler::EnsembleSampler, target::ParallelTarget, state; α=1, kwargs...)
@@ -168,9 +171,8 @@ function adaptive_step(sampler::EnsembleSampler, target::ParallelTarget, init;
     d = target.target.d
     
     step, yA, yB, max_eps = init    
-    step, _ = Step(sampler, target, step)
-    xx, uu, ll, gg, dEE = step
-    varE = mean(dEE.^2)/d
+    step = Step(sampler, target, step)
+    varE = mean(step.dE.^2)/d
     if dialog
         println("eps: ", eps, " --> VarE/d: ", varE)
     end    
@@ -211,7 +213,7 @@ function tune_nu!(sampler::EnsembleSampler, target::ParallelTarget)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init, sample;
+function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, init::EnsembleState;
                               burn_in::Int=0, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
@@ -222,26 +224,24 @@ function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, 
     
     if burn_in > 0
         @info "Starting burn in ⏳" 
-        loss, init, sample = Init_burnin(sampler, target, init; kwargs...) 
-        xs, _, _, _, _ = init
+        loss, init = Init_burnin(sampler, target, init; kwargs...) 
+        xs = init.x
         for i  in 1:burn_in
-            lloss, step, sample = Step_burnin(sampler, target, init; kwargs...)    
+            lloss, step = Step_burnin(sampler, target, init; kwargs...)    
             if lloss < loss
                 if dialog
                     println("Virial loss: ", lloss, " --> Relative improvement: ", abs(lloss/loss - 1))
                 end     
-                x, _, _, _, _ = init
-                xs = [xs; x]              
+                xs = [xs; init.x]              
                 if (lloss <= sampler.settings.loss_wanted) || (abs(lloss/loss - 1) < 0.01)
                     @info string("Virial loss condition met during burn-in at step: ", i)
                     break
                 end
                 loss = lloss
                 init = step        
-            else       
-                x, u, l, g, dE = init         
-                uu = Partially_refresh_momentum(sampler, target, u)           
-                init = (x, uu, l, g, dE)
+            else      
+                uu = Partially_refresh_momentum(sampler, target, init.u)           
+                init = EnsembleState(init.x, uu, init.l, init.g, init.dE)
             end            
             if i == burn_in
                 @warn "Maximum number of steps reached during burn-in"
@@ -289,5 +289,5 @@ function tune_hyperparameters(sampler::EnsembleSampler, target::ParallelTarget, 
     tune_nu!(sampler, target)
     @info string("Final nu ", sampler.hyperparameters.nu)                   
                     
-    return init, sample
+    return init
 end

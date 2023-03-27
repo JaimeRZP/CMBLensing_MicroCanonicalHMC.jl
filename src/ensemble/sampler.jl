@@ -85,17 +85,14 @@ function Update_momentum(d::Number, eff_eps::Number,
     return uu, delta_r
 end
 
-function Dynamics(sampler::EnsembleSampler, target::ParallelTarget, state)
-    """One step of the Langevin-like dynamics."""
-    x, u, l, g, dE = state
-    # Hamiltonian step
-    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-    # add noise to the momentum direction
-    uuu = Partially_refresh_momentum(sampler, target, uu)
-    dEE = kinetic_change .+ ll .- l
-    return xx, uuu, ll, gg, dEE
-end
-
+struct EnsembleState{T}
+    x::Matrix{T}
+    u::Matrix{T}
+    l::Vector{T}
+    g::Matrix{T}
+    dE::Vector{T}
+end        
+    
 function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
@@ -111,19 +108,18 @@ function Init(sampler::EnsembleSampler, target::ParallelTarget; kwargs...)
     u = Random_unit_vector(sampler, target) #random initial direction
 
     dE = zeros(sett.nchains)
-    sample = (target.inv_transform(x), dE, -l)
-    state = (x, u, l, g, dE)
-    return state, sample
+    return EnsembleState(x, u, l, g, dE)
 end
 
-function Step(sampler::EnsembleSampler, target::ParallelTarget, state; kwargs...)
-    """Tracks transform(x) as a function of number of iterations"""
-    step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, dEE = step
-
-    return step, (target.inv_transform(xx), dEE, -ll)
+function Step(sampler::EnsembleSampler, target::ParallelTarget, state::EnsembleState; kwargs...)
+    """One step of the Langevin-like dynamics."""
+    # Hamiltonian step
+    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
+    # add noise to the momentum direction
+    uuu = Partially_refresh_momentum(sampler, target, uu)
+    dEE = kinetic_change .+ ll .- state.l
+    return EnsembleState(xx, uuu, ll, gg, dEE)
 end
-
 
 function Sample(sampler::EnsembleSampler, target::Target, num_steps::Int;
                 burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)
@@ -142,28 +138,27 @@ function Sample(sampler::EnsembleSampler, target::Target, num_steps::Int;
         println(io, string(target.target.vsyms))
     end       
 
-    state, sample = Init(sampler, target; kwargs...)
-    state, sample = tune_hyperparameters(sampler, target, state, sample;
-                                         burn_in=burn_in, kwargs...)
+    state = Init(sampler, target; kwargs...)
+    state = tune_hyperparameters(sampler, target, state;
+                                 burn_in=burn_in, kwargs...)
 
     chains = zeros(num_steps, nchains, target.target.d+2)
-    X, E, L = sample
-    chains[1, :, :] = [X E L]
+    sample = [target.inv_transform(state.x) state.dE -state.l]       
+    chains[1, :, :] = sample
             
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
-        println(io, [X E L])
-        for i in 1:num_steps
-            try    
-                state, sample = Step(sampler, target, state; kwargs...)
-                X, E, L = sample
-                chains[i, :, :] = [X E L]    
-                println(io, [X E L])
-            catch
-                @warn "Divergence encountered after tuning"
-            end        
+        println(io, sample)
+        for i in 1:num_steps-1
+            #try    
+                state = Step(sampler, target, state; kwargs...)
+                sample = [target.inv_transform(state.x) state.dE -state.l]
+                chains[i, :, :] = sample    
+                println(io, sample)
+            #catch
+            #    @warn "Divergence encountered after tuning"
+            #end        
         end
     end
-    
 
     io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
         ess, rhat = Summarize(chains)

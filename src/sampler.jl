@@ -117,17 +117,6 @@ function Update_momentum(d::Number, eff_eps::Number,
     return uu, delta_r
 end
 
-function Dynamics(sampler::Sampler, target::Target, state)
-    """One step of the Langevin-like dynamics."""
-    x, u, l, g, dE = state
-    # Hamiltonian step
-    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-    # add noise to the momentum direction
-    uuu = Partially_refresh_momentum(sampler, target, uu)   
-    dEE = kinetic_change + ll - l
-    return xx, uuu, ll, gg, dEE
-end
-
 function Energy(target::Target,
                 x::AbstractVector, xx::AbstractVector,
                 E::Number, kinetic_change::Number)
@@ -137,6 +126,14 @@ function Energy(target::Target,
     EE = E + dE
     return -nllogp, EE
 end
+    
+struct State{T}
+    x::Vector{T}
+    u::Vector{T}
+    l::T
+    g::Vector{T}
+    dE::T    
+end    
 
 function Init(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
@@ -152,18 +149,19 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     g .*= d/(d-1)
     u = Random_unit_vector(d) #random initial direction
 
-    sample = [target.inv_transform(x); 0.0; -l]
-    state = (x, u, l, g, 0.0)
-    return state, sample
-end
+    return State(x, u, l, g, 0.0)
+end        
 
-function Step(sampler::Sampler, target::Target, state; kwargs...)
-    """Tracks transform(x) as a function of number of iterations"""
-    step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, dEE = step
-    return step, [target.inv_transform(xx); dEE; -ll]
+function Step(sampler::Sampler, target::Target, state::State; kwargs...)
+    """One step of the Langevin-like dynamics."""
+    # Hamiltonian step
+    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
+    # add noise to the momentum direction
+    uuu = Partially_refresh_momentum(sampler, target, uu)   
+    dEE = kinetic_change + ll - state.l
+    return State(xx, uuu, ll, gg, dEE)
 end
-
+    
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
                 burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)
     """Args:
@@ -179,17 +177,20 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
         println(io, string(target.vsyms))
     end        
 
-    state, sample = Init(sampler, target; kwargs...)
-    state, sample = tune_hyperparameters(sampler, target, state, sample;
-                                         burn_in=burn_in, kwargs...)
-
+    state = Init(sampler, target; kwargs...)
+    state = tune_hyperparameters(sampler, target, state;
+                                 burn_in=burn_in, kwargs...)
+            
     samples = []
+    sample = [target.inv_transform(state.x); state.dE; -state.l]        
     push!(samples, sample)
+            
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
-        for i in 1:num_steps
+        for i in 1:num_steps-1
             try    
-                state, sample = Step(sampler, target, state; kwargs...)
+                state = Step(sampler, target, state; kwargs...)
+                sample = [target.inv_transform(state.x); state.dE; -state.l]    
                 push!(samples, sample)
                 println(io, sample)
             catch
