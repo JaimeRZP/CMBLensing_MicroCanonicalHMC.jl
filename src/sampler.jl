@@ -15,7 +15,7 @@ Hyperparameters(;kwargs...) = begin
    lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
    sigma = get(kwargs, :sigma, [0.0])
    gamma = get(kwargs, :gamma, (50-1)/(50+1)) #(neff-1)/(neff+1) 
-   sigma_xi = get(kwargs, :sigma_xi, 1.0)
+   sigma_xi = get(kwargs, :sigma_xi, 1.5)
    Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
 end
 
@@ -137,18 +137,7 @@ struct State{T} <: AbstractState
     l::T
     g::Vector{T}
     dE::T    
-end 
-    
- 
-struct AdaptiveState{T} <: AbstractState
-    x::Vector{T}
-    u::Vector{T}
-    l::T
-    g::Vector{T}
-    dE::T
-    Feps::T
-    Weps::T 
-end     
+end  
 
 function Init(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
@@ -165,18 +154,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     u = Random_unit_vector(d) #random initial direction
 
     return State(x, u, l, g, 0.0)
-end
-    
-function AdaptiveInit(state::State, eps::Float64)
-    Weps = 1e-5
-    Feps = Weps * eps^(1/6)    
-    return AdaptiveState(state.x, state.u, state.l, state.g, state.dE, Weps, Feps)
-end     
-  
-function AdaptiveInit(sampler::Sampler, target::Target; kwargs...)
-    state = Init(sampler, target; kwargs...)   
-    return AdaptiveInit(state, sampler.hyperparameters.eps)
-end    
+end 
 
 function Step(sampler::Sampler, target::Target, state::AbstractState; kwargs...)
     """One step of the Langevin-like dynamics."""
@@ -186,36 +164,7 @@ function Step(sampler::Sampler, target::Target, state::AbstractState; kwargs...)
     uuu = Partially_refresh_momentum(sampler, target, uu)   
     dEE = kinetic_change + ll - state.l
     return State(xx, uuu, ll, gg, dEE)
-end
-    
-function AdaptiveStep(sampler::Sampler, target::Target, state::AdaptiveState; kwargs...)
-    """One step of the Langevin-like dynamics."""
-    dialog = get(kwargs, :dialog, false)    
-    sett = sampler.settings    
-    eps = sampler.hyperparameters.eps  
-    sigma_xi = sampler.hyperparameters.sigma_xi
-    gamma = sampler.hyperparameters.gamma    
-    varE_wanted = sett.varE_wanted
-    d = target.d    
-        
-    step = Step(sampler, target, state; kwargs...)
-    varE = step.dE^2/d
-     
-    if dialog
-        println("eps: ", eps, " --> VarE/d: ", varE)
-    end             
-        
-    xi = varE/varE_wanted + 1e-8   
-    w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
-    # Kalman update the linear combinations
-    Feps = gamma * state.Feps + w * (xi/eps^6)  
-    Weps = gamma * state.Weps + w
-    new_eps = (Feps/Weps)^(-1/6)
-
-    sampler.hyperparameters.eps = new_eps
-    
-    return AdaptiveState(step.x, step.u, step.l, step.g, step.dE, Feps, Weps)
-end    
+end  
     
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
                 burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)

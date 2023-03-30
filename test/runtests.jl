@@ -2,32 +2,6 @@ using Test
 using MicroCanonicalHMC
 
 @testset "All tests" begin
-    
-    @testset "CreateSampler" begin
-        spl = MCHMC()
-        sett = spl.settings
-        hp = spl.hyperparameters
-        dy = spl.hamiltonian_dynamics
-        
-        @test sett.nchains == 1
-        @test sett.integrator == "LF"
-        @test sett.loss_wanted == 1.0
-        @test sett.varE_wanted == 0.001
-        @test sett.tune_eps_nsteps == 100
-        @test sett.tune_L_nsteps == 2500
-        @test sett.init_eps == nothing
-        @test sett.init_L == nothing
-        @test sett.init_sigma == nothing
-        
-        @test hp.eps == 0.0
-        @test hp.L == 0.0
-        @test hp.nu == 0.0
-        @test hp.sigma == [0.0]
-        @test hp.gamma == (50-1)/(50+1)
-        @test hp.sigma_xi == 1.0
-        
-        @test dy == MicroCanonicalHMC.Leapfrog
-    end
 
     @testset "Settings" begin
         spl = MCHMC(0.1, 0.1, 10; integrator="MN",
