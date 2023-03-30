@@ -169,51 +169,6 @@ function dual_averaging(sampler::Sampler, target::Target, init; α=1, kwargs...)
     return success
 end
 
-function adaptive_step(sampler::Sampler, target::Target, init;
-                        sigma_xi::Float64=1.0,
-                        gamma::Float64=(50-1)/(50+1), # (neff-1)/(neff+1) 
-                        kwargs...)
-    dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings
-    eps = sampler.hyperparameters.eps
-    varE_wanted = sett.varE_wanted
-    d = target.d
-    
-    step, Feps, Weps, max_eps = init    
-    step = Step(sampler, target, step)
-
-    varE = step.dE^2/d
-    if dialog
-        println("eps: ", eps, " --> VarE/d: ", varE)
-    end    
-    
-    no_divergences = isfinite(varE)
-    if no_divergences    
-        success = (abs(varE-varE_wanted)/varE_wanted) < 0.05 
-        if !success   
-            xi = varE/varE_wanted + 1e-8   
-            w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
-            # Kalman update the linear combinations
-            Feps = gamma * Feps + w * (xi/eps^6)  
-            Weps = gamma * Weps + w
-            new_eps = (Feps/Weps)^(-1/6)
-
-            if new_eps > max_eps
-                sampler.hyperparameters.eps = max_eps
-            else
-                sampler.hyperparameters.eps = new_eps        
-            end
-        else
-            @info string("Found eps: ", sampler.hyperparameters.eps, " ✅")
-        end
-    else
-        success = false    
-        max_eps = sampler.hyperparameters.eps
-        sampler.hyperparameters.eps = 0.5 * eps    
-    end
-        
-    return success, (step, Feps, Weps, max_eps)    
-end
     
 function eval_nu(eps, L, d)
     nu = sqrt((exp(2 * eps / L) - 1.0) / d)
@@ -282,16 +237,12 @@ function tune_hyperparameters(sampler::Sampler, target::Target, init::State;
                 end
             end
         end
-        if tuning_method=="AdaptiveStep"
-            Weps = 1e-5
-            Feps = Weps * sampler.hyperparameters.eps^(1/6)    
-            tuning_init = (init, Feps, Weps, Inf)    
+        if tuning_method=="AdaptiveStep" 
+            adaptive_init = AdaptiveInit(init, sampler.hyperparameters.eps)    
             for i in 1:sett.tune_eps_nsteps
-               success, tuning_init = adaptive_step(sampler, target, tuning_init; kwargs...)
-               if success
-                   break
-               end         
+               adaptive_init = AdaptiveStep(sampler, target, adaptive_init; kwargs...)        
             end
+            @info string("Found eps ", sampler.hyperparameters.eps)          
         end 
     end
 

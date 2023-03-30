@@ -11,6 +11,7 @@ using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed, Optim
 using Distributions, DistributionsAD
 
 abstract type Target <: AbstractMCMC.AbstractModel end
+abstract type AbstractState end
 
 include("sampler.jl")
 include("targets.jl")
