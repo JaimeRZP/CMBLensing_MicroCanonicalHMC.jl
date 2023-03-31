@@ -3,25 +3,28 @@ mutable struct Hyperparameters
     L::Float64
     nu::Float64
     lambda_c::Float64
-    sigma::AbstractVector
+    sigma::AbstractVector{Float64}
+    gamma::Float64
+    sigma_xi::Float64
 end
 
 Hyperparameters(;kwargs...) = begin
    eps = get(kwargs, :eps, 0.0)
    L = get(kwargs, :L, 0.0)
    nu = get(kwargs, :nu, 0.0)
-   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
    sigma = get(kwargs, :sigma, [0.0])
-   Hyperparameters(eps, L, nu, lambda_c, sigma)
+   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836) 
+   gamma = get(kwargs, :gamma, (50-1)/(50+1)) #(neff-1)/(neff+1) 
+   sigma_xi = get(kwargs, :sigma_xi, 1.5)
+   Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
 end
 
 mutable struct Settings
+    nadapt::Int
+    TEV::Float64
     nchains::Int
+    adaptive::Bool
     integrator::String
-    loss_wanted::Float64
-    varE_wanted::Float64
-    tune_eps_nsteps::Int
-    tune_L_nsteps::Int
     init_eps
     init_L
     init_sigma
@@ -29,18 +32,15 @@ end
 
 Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
-    
+    nadapt = get(kwargs, :nadapt, 1000)
+    TEV = get(kwargs, :TEV, 0.001)
+    adaptive = get(kwargs, :adaptive, false)
     nchains = get(kwargs, :nchains, 1)
     integrator = get(kwargs, :integrator, "LF")
-    loss_wanted = get(kwargs, :loss_wanted, 1.0)
-    varE_wanted = get(kwargs, :varE_wanted, 0.001)
-    tune_eps_nsteps = get(kwargs, :tune_eps_nsteps, 100)
-    tune_L_nsteps = get(kwargs, :tune_nsteps, 2500)
     init_eps = get(kwargs, :init_eps, nothing)
     init_L = get(kwargs, :init_L, nothing)
     init_sigma = get(kwargs, :init_sigma, nothing)
-    Settings(nchains, integrator,
-             loss_wanted, varE_wanted, tune_eps_nsteps, tune_L_nsteps,
+    Settings(nadapt, TEV,  nchains, adaptive, integrator,
              init_eps, init_L, init_sigma)
 end
 
@@ -50,10 +50,10 @@ struct Sampler <: AbstractMCMC.AbstractSampler
    hamiltonian_dynamics::Function
 end
 
-function MCHMC(eps, L; kwargs...)
+function MCHMC(nadapt, TEV; kwargs...)
 
-   sett = Settings(;kwargs...)
-   hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
+   sett = Settings(;nadapt=nadapt, TEV=TEV, kwargs...)
+   hyperparameters = Hyperparameters(;kwargs...)
 
    if sett.integrator == "LF"  # leapfrog
        hamiltonian_dynamics = Leapfrog
@@ -66,10 +66,6 @@ function MCHMC(eps, L; kwargs...)
    end
 
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
-end
-
-function MCHMC(; kwargs...)
-    return MCHMC(0.0, 0.0; kwargs...)
 end
 
 function Random_unit_vector(d)
@@ -99,15 +95,6 @@ function Update_momentum(d::Number, eff_eps::Number,
     e = - g ./ g_norm
     delta = eff_eps * g_norm / (d-1)
     ue = dot(u, e)    
-        
-    #=
-    sh = sinh(delta)
-    ch = cosh(delta)
-    th = tanh(delta)
-    uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
-    uu ./= sqrt(sum(uu.^2))
-    delta_r = log(ch) + log1p(ue * th)
-    =#
 
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
@@ -132,8 +119,10 @@ struct State{T}
     u::Vector{T}
     l::T
     g::Vector{T}
-    dE::T    
-end    
+    dE::T
+    Feps::T
+    Weps::T      
+end  
 
 function Init(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
@@ -141,29 +130,63 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     d = target.d
     ### initial conditions ###
     if :initial_x ∈ keys(kwargs)
-        x = target.transform(kwargs[:initial_x])
+        x = target.transform(kwargs[:initial_x])  
     else
         x = target.prior_draw()
-    end
+    end 
     l, g = target.nlogp_grad_nlogp(x)
     g .*= d/(d-1)
-    u = Random_unit_vector(d) #random initial direction
-
-    return State(x, u, l, g, 0.0)
-end        
+    u = -g ./ sqrt.(sum(g.^2))        
+    Weps = 1e-5
+    Feps = Weps * sampler.hyperparameters.eps^(1/6) 
+    return State(x, u, l, g, 0.0, Feps, Weps)
+end 
 
 function Step(sampler::Sampler, target::Target, state::State; kwargs...)
     """One step of the Langevin-like dynamics."""
+    dialog = get(kwargs, :dialog, false)    
+        
+    eps = sampler.hyperparameters.eps  
+    sigma_xi = sampler.hyperparameters.sigma_xi
+    gamma = get(kwargs, :gamma, sampler.hyperparameters.gamma)
+        
+    TEV = sampler.settings.TEV
+    adaptive = get(kwargs, :adaptive, sampler.settings.adaptive)
+        
+    d = target.d   
+        
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
     # add noise to the momentum direction
     uuu = Partially_refresh_momentum(sampler, target, uu)   
     dEE = kinetic_change + ll - state.l
-    return State(xx, uuu, ll, gg, dEE)
-end
+    
+    if adaptive    
+        varE = dEE^2/d    
+
+        if dialog
+            println("eps: ", eps, " --> VarE/d: ", varE)
+        end             
+
+        xi = varE/TEV + 1e-8   
+        w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
+        # Kalman update the linear combinations
+        Feps = gamma * state.Feps + w * (xi/eps^6)  
+        Weps = gamma * state.Weps + w
+        new_eps = (Feps/Weps)^(-1/6)
+
+        sampler.hyperparameters.eps = new_eps
+        tune_nu!(sampler, target)
+    else
+        Feps = state.Feps
+        Weps = state.Weps    
+    end
+        
+    return State(xx, uuu, ll, gg, dEE, Feps, Weps)   
+end  
     
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                burn_in::Int=0, fol_name=".", file_name="samples", progress=true, kwargs...)
+                fol_name=".", file_name="samples", kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -178,8 +201,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     end        
 
     state = Init(sampler, target; kwargs...)
-    state = tune_hyperparameters(sampler, target, state;
-                                 burn_in=burn_in, kwargs...)
+    state = tune_hyperparameters(sampler, target, state; kwargs...)
             
     samples = []
     sample = [target.inv_transform(state.x); state.dE; -state.l]        
