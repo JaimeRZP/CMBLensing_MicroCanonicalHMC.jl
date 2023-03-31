@@ -5,8 +5,8 @@ using MicroCanonicalHMC
 
     @testset "Settings" begin
         spl = MCHMC(10_000, 0.1; nchains=10, integrator="MN",
-                    init_eps=1.0, init_L=1.0, init_sigma=[1.0],
-                    sigma=[1.0], gamma=2.0, sigma_xi=2.0)
+                    eps=0.1, L=0.1, sigma=[1.0], gamma=2.0, sigma_xi=2.0,
+                    init_eps=1.0, init_L=1.0, init_sigma=[1.0])
 
         sett = spl.settings
         hp = spl.hyperparameters
