@@ -1,6 +1,6 @@
 module MicroCanonicalHMC
 
-export Settings, MCHMC, Sample, AdaptiveSample
+export Settings, MCHMC, Sample
 export Summarize
 export TuringTarget, GaussianTarget, RosenbrockTarget, CustomTarget
 export ParallelTarget
@@ -11,10 +11,8 @@ using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed, Optim
 using Distributions, DistributionsAD
 
 abstract type Target <: AbstractMCMC.AbstractModel end
-abstract type AbstractState end
 
 include("sampler.jl")
-include("adaptive.jl")
 include("targets.jl")
 include("integrators.jl")
 include("tuning.jl")

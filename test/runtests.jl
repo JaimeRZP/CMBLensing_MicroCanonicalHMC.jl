@@ -4,8 +4,7 @@ using MicroCanonicalHMC
 @testset "All tests" begin
 
     @testset "Settings" begin
-        spl = MCHMC(0.1, 0.1, 10; integrator="MN",
-                    loss_wanted=20, varE_wanted=0.01, tune_eps_nsteps=10, tune_L_nsteps=10,
+        spl = MCHMC(10_000, 0.1; nchains=10, integrator="MN",
                     init_eps=1.0, init_L=1.0, init_sigma=[1.0],
                     sigma=[1.0], gamma=2.0, sigma_xi=2.0)
 
@@ -15,10 +14,8 @@ using MicroCanonicalHMC
         
         @test sett.nchains == 10
         @test sett.integrator == "MN"
-        @test sett.loss_wanted == 20
-        @test sett.varE_wanted == 0.01
-        @test sett.tune_eps_nsteps == 10
-        @test sett.tune_L_nsteps == 10
+        @test sett.TEV == 0.1
+        @test sett.nadapt == 10_000
         @test sett.init_eps == 1.0
         @test sett.init_L == 1.0
         @test sett.init_sigma == [1.0]
