@@ -7,7 +7,7 @@ export ParallelTarget
 
 using LinearAlgebra, Statistics, Random, DataFrames
 using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff
-using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed, Optim
+using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed
 using Distributions, DistributionsAD
 
 abstract type Target <: AbstractMCMC.AbstractModel end
