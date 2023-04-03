@@ -1,11 +1,11 @@
-mutable struct Hyperparameters
-    eps::Float64
-    L::Float64
-    nu::Float64
-    lambda_c::Float64
-    sigma::AbstractVector{Float64}
-    gamma::Float64
-    sigma_xi::Float64
+mutable struct Hyperparameters{T}
+    eps::T
+    L::T
+    nu::T
+    lambda_c::T
+    sigma::AbstractVector{T}
+    gamma::T
+    sigma_xi::T
 end
 
 Hyperparameters(;kwargs...) = begin
@@ -19,15 +19,15 @@ Hyperparameters(;kwargs...) = begin
    Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
 end
 
-mutable struct Settings
+mutable struct Settings{T}
     nadapt::Int
-    TEV::Float64
+    TEV::T
     nchains::Int
     adaptive::Bool
     integrator::String
-    init_eps
-    init_L
-    init_sigma
+    init_eps::Union{Nothing, T}
+    init_L::Union{Nothing, T}
+    init_sigma::Union{Nothing, AbstractVector{T}}
 end
 
 Settings(;kwargs...) = begin
