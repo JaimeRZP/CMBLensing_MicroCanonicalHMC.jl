@@ -94,7 +94,7 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, state::State; kwargs...)
+function tune_hyperparameters(sampler::Sampler, target::Target, state::State; progress, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings  
@@ -113,7 +113,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State; kw
     if tune_L || tune_sigma    
         xs = zeros(nadapt, target.d)
         xs[1,:]=state.x[:]     
-        for i in 2:nadapt
+        @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
             state = Step(sampler, target, state; gamma=1.0, adaptive=true, kwargs...)   
             xs[i,:]=state.x[:]                 
         end            
