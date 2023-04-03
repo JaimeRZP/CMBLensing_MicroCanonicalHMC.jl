@@ -4,6 +4,7 @@ authors = ["Jaime Ruiz Zapatero <jaimerz011235813@gmail.com>", "Marco Bonici <bo
 version = "0.1.0"
 
 [deps]
+AbstractMCMC = "80f14c24-f653-4e6a-9b94-39d6b0f70001"
 CMBLensing = "b60c06c0-7e54-11e8-3788-4bd722d65317"
 CMBLensingInferenceTestProblem = "77eb751d-b138-43db-8fbb-26307a053bc2"
 Distributed = "8ba89e20-285c-5b6f-9357-94700520ee1b"

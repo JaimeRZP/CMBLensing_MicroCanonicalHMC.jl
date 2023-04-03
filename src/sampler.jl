@@ -3,24 +3,27 @@ mutable struct Hyperparameters
     L::Float64
     nu::Float64
     lambda_c::Float64
-    sigma::AbstractVector
+    sigma
+    gamma::Float64
+    sigma_xi::Float64
 end
 
 Hyperparameters(;kwargs...) = begin
    eps = get(kwargs, :eps, 0.0)
    L = get(kwargs, :L, 0.0)
    nu = get(kwargs, :nu, 0.0)
-   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836)
    sigma = get(kwargs, :sigma, [0.0])
-   Hyperparameters(eps, L, nu, lambda_c, sigma)
+   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836) 
+   gamma = get(kwargs, :gamma, (50-1)/(50+1)) #(neff-1)/(neff+1) 
+   sigma_xi = get(kwargs, :sigma_xi, 1.5)
+   Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
 end
 
 mutable struct Settings
-    key::MersenneTwister
-    varE_wanted::Float64
-    burn_in::Int
-    tune_samples::Int
-    tune_maxiter::Int
+    nadapt::Int
+    TEV::Float64
+    nchains::Int
+    adaptive::Bool
     integrator::String
     init_eps
     init_L
@@ -29,31 +32,28 @@ end
 
 Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
-    seed = get(kwargs, :seed, 0)
-    key = MersenneTwister(seed)
-    varE_wanted = get(kwargs, :varE_wanted, 0.2)
-    burn_in = get(kwargs, :burn_in, 0)
-    tune_samples = get(kwargs, :tune_samples, 20)
-    tune_maxiter = get(kwargs, :tune_maxiter, 10)
+    nadapt = get(kwargs, :nadapt, 1000)
+    TEV = get(kwargs, :TEV, 0.001)
+    adaptive = get(kwargs, :adaptive, false)
+    nchains = get(kwargs, :nchains, 1)
     integrator = get(kwargs, :integrator, "LF")
     init_eps = get(kwargs, :init_eps, nothing)
     init_L = get(kwargs, :init_L, nothing)
     init_sigma = get(kwargs, :init_sigma, nothing)
-    Settings(key,
-             varE_wanted, burn_in, tune_samples, tune_maxiter,
-             integrator, init_eps, init_L, init_sigma)
+    Settings(nadapt, TEV,  nchains, adaptive, integrator,
+             init_eps, init_L, init_sigma)
 end
 
-struct Sampler
+struct Sampler <: AbstractMCMC.AbstractSampler
    settings::Settings
    hyperparameters::Hyperparameters
    hamiltonian_dynamics::Function
 end
 
-function MCHMC(eps, L; kwargs...)
+function MCHMC(nadapt, TEV; kwargs...)
 
-   sett = Settings(;kwargs...)
-   hyperparameters = Hyperparameters(;eps=eps, L=L, kwargs...)
+   sett = Settings(;nadapt=nadapt, TEV=TEV, kwargs...)
+   hyperparameters = Hyperparameters(;kwargs...)
 
    if sett.integrator == "LF"  # leapfrog
        hamiltonian_dynamics = Leapfrog
@@ -68,17 +68,9 @@ function MCHMC(eps, L; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function MCHMC(; kwargs...)
-    return MCHMC(0.0, 0.0; kwargs...)
-end
-
-function Random_unit_vector(sampler::Sampler, target::Target)
-    """Generates a random (isotropic) unit vector."""
-    return Random_unit_vector(sampler.settings.key, target.d)
-end
-
-function Random_unit_vector(key, d)
-    u = randn(key, d)
+function Random_unit_vector(d)
+    """Generates a random (isotropic) unit vector."""    
+    u = randn(d)
     u ./= sqrt(sum(u.^2))
     return u
 end
@@ -86,58 +78,30 @@ end
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
     return Partially_refresh_momentum(sampler.hyperparameters.nu,
-                                      sampler.settings.key,
                                       target.d,
                                       u)
 end
 
-function Partially_refresh_momentum(nu, key, d, u::AbstractVector)
-    z = nu .* Random_unit_vector(key, d)
+function Partially_refresh_momentum(nu, d, u::AbstractVector)
+    z = nu .* Random_unit_vector(d)
     uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end
 
-function Update_momentum(target::Target, eff_eps::Number,
-                         g::AbstractVector, u::AbstractVector)
-    # TO DO: type inputs
-    # Have to figure out where and when to define target
-    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""
-    Update_momentum(target.d, eff_eps::Number,g ,u)
-end
-
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
-    g_norm = sqrt(sum(g .^2 ))
+    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
+    g_norm = sqrt(sum(g.^2))
     e = - g ./ g_norm
     delta = eff_eps * g_norm / (d-1)
-    ue = dot(u, e)
-
-    #=
-    sh = sinh(delta)
-    ch = cosh(delta)
-    th = tanh(delta)
-    uu = (u .+ e .* (sh + ue * (ch - 1))) / (ch + ue * sh)
-    uu ./= sqrt(sum(uu.^2))
-    delta_r = log(ch) + log1p(ue * th)
-    =#
+    ue = dot(u, e)    
 
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
     uu ./= sqrt(sum(uu.^2))
-    delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)
-
+            
+    delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
     return uu, delta_r
-end
-
-function Dynamics(sampler::Sampler, target::Target, state)
-    """One step of the Langevin-like dynamics."""
-    x, u, l, g, dE = state
-    # Hamiltonian step
-    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, x, u, l, g)
-    # add noise to the momentum direction
-    uuu = Partially_refresh_momentum(sampler, target, uu)
-    dEE = kinetic_change + ll - l
-    return xx, uuu, ll, gg, dEE
 end
 
 function Energy(target::Target,
@@ -149,6 +113,16 @@ function Energy(target::Target,
     EE = E + dE
     return -nllogp, EE
 end
+    
+struct State
+    x
+    u
+    l
+    g
+    dE::Float64
+    Feps::Float64
+    Weps::Float64     
+end  
 
 function Init(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
@@ -156,31 +130,64 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     d = target.d
     ### initial conditions ###
     if :initial_x ∈ keys(kwargs)
-        x = target.transform(kwargs[:initial_x])
+        x = target.transform(kwargs[:initial_x])  
     else
-        x = target.prior_draw(sett.key)
-    end
+        x = target.prior_draw()
+    end 
     l, g = target.nlogp_grad_nlogp(x)
     g .*= d/(d-1)
-    u = Random_unit_vector(sampler, target) #random initial direction
+    #u = -g ./ sqrt.(sum(g.^2))
+    u = Random_unit_vector(sampler, target)
+    Weps = 1e-5
+    Feps = Weps * sampler.hyperparameters.eps^(1/6) 
+    return State(x, u, l, g, 0.0, Feps, Weps)
+end 
 
-    state = (x, u, l, g, 0.0)
+function Step(sampler::Sampler, target::Target, state::State; kwargs...)
+    """One step of the Langevin-like dynamics."""
+    dialog = get(kwargs, :dialog, false)    
+        
+    eps = sampler.hyperparameters.eps  
+    sigma_xi = sampler.hyperparameters.sigma_xi
+    gamma = get(kwargs, :gamma, sampler.hyperparameters.gamma)
+        
+    TEV = sampler.settings.TEV
+    adaptive = get(kwargs, :adaptive, sampler.settings.adaptive)
+        
+    d = target.d   
+        
+    # Hamiltonian step
+    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
+    # add noise to the momentum direction
+    uuu = Partially_refresh_momentum(sampler, target, uu)   
+    dEE = kinetic_change + ll - state.l
+    
+    if adaptive    
+        varE = dEE^2/d    
 
-    return state, [target.inv_transform(x)[:]; g[:]; 0.0; -l]
-end
+        if dialog
+            println("eps: ", eps, " --> VarE/d: ", varE)
+        end             
 
-function Step(sampler::Sampler, target::Target, state; kwargs...)
-    """Tracks transform(x) as a function of number of iterations"""
-    x, u, l, g, dE = state
-    step = Dynamics(sampler, target, state)
-    xx, uu, ll, gg, dEE = step
+        xi = varE/TEV + 1e-8   
+        w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
+        # Kalman update the linear combinations
+        Feps = gamma * state.Feps + w * (xi/eps^6)  
+        Weps = gamma * state.Weps + w
+        new_eps = (Feps/Weps)^(-1/6)
 
-    return step, [target.inv_transform(xx)[:]; gg[:]; dEE; -ll]
-end
-
-
+        sampler.hyperparameters.eps = new_eps
+        tune_nu!(sampler, target)
+    else
+        Feps = state.Feps
+        Weps = state.Weps    
+    end
+        
+    return State(xx, uuu, ll, gg, dEE, Feps, Weps)   
+end  
+    
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                file_name="samples", progress=true, kwargs...)
+                fol_name=".", file_name="samples", kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -188,25 +195,34 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
            random_key: jax radnom seed, e.g. jax.random.PRNGKey(42).
         Returns:
             samples (shape = (num_steps, self.Target.d))
-    """
+    """        
 
-    state, sample = Init(sampler, target; kwargs...)
-    tune_hyperparameters(sampler, target, state; kwargs...)
-
-    for i in 1:sampler.settings.burn_in
-        state, sample = Step(sampler, target, state)
-    end
-
+    state = Init(sampler, target; kwargs...)
+    state = tune_hyperparameters(sampler, target, state; kwargs...)
+            
     samples = []
+    sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]        
     push!(samples, sample)
-    io = open(string(file_name, ".txt"), "w") do io
+            
+    io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
-        for i in 1:num_steps
-            state, sample = Step(sampler, target, state; kwargs...)
-            push!(samples, sample)
-            println(io, sample)
+        for i in 1:num_steps-1
+            try    
+                state = Step(sampler, target, state; kwargs...)
+                sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]    
+                push!(samples, sample)
+                println(io, sample)
+            catch
+                @warn "Divergence encountered after tuning"
+            end        
         end
     end
-
+            
+    io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
+        ess, rhat = Summarize(samples)
+        println(io, ess)
+        println(io, rhat)
+    end         
+                
     return samples
 end

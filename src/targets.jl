@@ -127,7 +127,7 @@ CMBLensingTarget(prob; kwargs...) = begin
         return nlogp(xt), grad_nlogp(xt)
     end
 
-    function prior_draw(key)
+    function prior_draw()
         xt = transform(Ωstart)
         return CMBLensing.LenseBasis(xt)
     end
