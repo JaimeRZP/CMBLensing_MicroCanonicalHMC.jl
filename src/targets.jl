@@ -290,3 +290,59 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
     inv_transform,
     prior_draw)
 end
+
+mutable struct CMBLensingTarget <: Target
+    d::Int
+    Λmass
+    nlogp::Function
+    grad_nlogp::Function
+    nlogp_grad_nlogp::Function 
+    transform::Function
+    inv_transform::Function
+    prior_draw::Function
+end
+
+CMBLensingTarget(prob; kwargs...) = begin
+    Ωstart = prob.Ωstart
+    d = length(Ωstart)
+    Λmass = real(prob.Λmass)
+    sqrtΛmass = sqrt(Λmass)
+    inv_sqrtΛmass = pinv(sqrtΛmass)
+
+    function transform(x)
+        xt = CMBLensing.LenseBasis(sqrtΛmass * x)
+        return xt
+    end
+
+    function inv_transform(xt)
+        x = CMBLensing.LenseBasis(inv_sqrtΛmass * xt)
+        return x
+    end
+
+    function nlogp(xt)
+        x = inv_transform(xt)
+        return -1.0 .* prob(x)
+    end
+
+    function grad_nlogp(xt)
+        return CMBLensing.LenseBasis(Zygote.gradient(nlogp, xt)[1])
+    end
+    
+    function nlogp_grad_nlogp(xt)
+        return nlogp(xt), grad_nlogp(xt)
+    end
+
+    function prior_draw()
+        xt = transform(Ωstart)
+        return CMBLensing.LenseBasis(xt)
+    end
+
+    CMBLensingTarget(d,
+                     Λmass,
+                     nlogp,
+                     grad_nlogp,
+                     nlogp_grad_nlogp,
+                     transform,
+                     inv_transform,
+                     prior_draw)
+end

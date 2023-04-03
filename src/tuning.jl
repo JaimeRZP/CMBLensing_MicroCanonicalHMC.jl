@@ -112,10 +112,10 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State; kw
     # Tune L
     if tune_L || tune_sigma    
         xs = zeros(nadapt, target.d)
-        xs[1,:]=state.x     
+        xs[1,:]=state.x[:]     
         for i in 2:nadapt
             state = Step(sampler, target, state; gamma=1.0, adaptive=true, kwargs...)   
-            xs[i,:]=state.x                 
+            xs[i,:]=state.x[:]                
         end            
         sigma = vec(std(xs, dims=1))
         if tune_sigma

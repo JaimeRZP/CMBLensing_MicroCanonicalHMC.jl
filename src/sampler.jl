@@ -212,7 +212,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
         for i in 1:num_steps-1
             try    
                 state = Step(sampler, target, state; kwargs...)
-                sample = [target.inv_transform(state.x); state.dE; -state.l]    
+                sample = [target.inv_transform(state.x)[:]; state.dE; -state.l]    
                 push!(samples, sample)
                 println(io, sample)
             catch
