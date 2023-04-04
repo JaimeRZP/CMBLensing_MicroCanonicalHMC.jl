@@ -1,5 +1,6 @@
 using Test
 using MicroCanonicalHMC
+using LinearAlgebra
 
 @testset "All tests" begin
 
@@ -29,15 +30,14 @@ using MicroCanonicalHMC
         @test dy == MicroCanonicalHMC.Minimal_norm
     end
 
-    @test "Partially_refresh_momentum"
-        d = 2
+    @testset "Partially_refresh_momentum" begin
+        d = 10
         u = MicroCanonicalHMC.Random_unit_vector(d)
         @test length(u) == d
-        @test sqrt(sum(u.^2)) == 1.0
+        @test isapprox(norm(u),  1.0, rtol=0.0000001)
 
-        p = MicroCanonicalHMC.partially_refresh_momentum(0.1, d, u)
+        p = MicroCanonicalHMC.Partially_refresh_momentum(0.1, d, u)
         @test length(p) == d
-        @test sqrt(sum(p.^2)) == 1.0
+        @test isapprox(norm(p),  1.0, rtol=0.0000001)
     end
 end
-

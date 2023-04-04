@@ -70,9 +70,7 @@ end
 
 function Random_unit_vector(d)
     """Generates a random (isotropic) unit vector."""    
-    u = randn(d)
-    u ./= sqrt(sum(u.^2))
-    return u
+    return normalize(randn(d))
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
@@ -84,24 +82,23 @@ end
 
 function Partially_refresh_momentum(nu, d, u::AbstractVector)
     z = nu .* Random_unit_vector(d)
-    uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
-    return uu
+    uu = u .+ z
+    return normalize(uu)
 end
 
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
-    g_norm = sqrt(sum(g.^2))
+    g_norm = norm(g)
     e = - g ./ g_norm
     delta = eff_eps * g_norm / (d-1)
     ue = dot(u, e)    
 
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
-    uu ./= sqrt(sum(uu.^2))
             
     delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
-    return uu, delta_r
+    return normalize(uu), delta_r
 end
 
 function Energy(target::Target,
