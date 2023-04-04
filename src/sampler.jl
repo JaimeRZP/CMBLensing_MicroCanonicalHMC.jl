@@ -1,23 +1,48 @@
 
-@kwdef mutable struct Hyperparameters
-    eps      :: Float64 = 0
-    L        :: Float64 = 0
-    nu       :: Float64 = 0
-    lambda_c :: Float64 = 0.1931833275037836
-    sigma               = [0.0]
-    gamma    :: Float64 = (50-1)/(50+1)
-    sigma_xi :: Float64 = 1.5
+mutable struct Hyperparameters
+    eps::Float64
+    L::Float64
+    nu::Float64
+    lambda_c::Float64
+    sigma
+    gamma::Float64
+    sigma_xi::Float64
 end
 
-@kwdef mutable struct Settings
-    nadapt     :: Int     = 1000
-    TEV        :: Float64 = 0.001
-    nchains    :: Int     = 1
-    adaptive   :: Bool    = false
-    integrator :: String  = "LF"
-    init_eps              = nothing
-    init_L                = nothing
-    init_sigma            = nothing
+Hyperparameters(;kwargs...) = begin
+   eps = get(kwargs, :eps, 0.0)
+   L = get(kwargs, :L, 0.0)
+   nu = get(kwargs, :nu, 0.0)
+   sigma = get(kwargs, :sigma, [0.0])
+   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836) 
+   gamma = get(kwargs, :gamma, (50-1)/(50+1)) #(neff-1)/(neff+1) 
+   sigma_xi = get(kwargs, :sigma_xi, 1.5)
+   Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
+end
+
+mutable struct Settings
+    nadapt::Int
+    TEV::Float64
+    nchains::Int
+    adaptive::Bool
+    integrator::String
+    init_eps
+    init_L
+    init_sigma
+end
+
+Settings(;kwargs...) = begin
+    kwargs = Dict(kwargs)
+    nadapt = get(kwargs, :nadapt, 1000)
+    TEV = get(kwargs, :TEV, 0.001)
+    adaptive = get(kwargs, :adaptive, false)
+    nchains = get(kwargs, :nchains, 1)
+    integrator = get(kwargs, :integrator, "LF")
+    init_eps = get(kwargs, :init_eps, nothing)
+    init_L = get(kwargs, :init_L, nothing)
+    init_sigma = get(kwargs, :init_sigma, nothing)
+    Settings(nadapt, TEV,  nchains, adaptive, integrator,
+             init_eps, init_L, init_sigma)
 end
 
 struct Sampler <: AbstractMCMC.AbstractSampler
