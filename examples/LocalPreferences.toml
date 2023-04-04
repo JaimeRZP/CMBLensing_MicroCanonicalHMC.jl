@@ -1,2 +1,5 @@
 [CMBLensing]
 precompile = "(:P,), (Float32,), (Array,)"
+
+[ForwardDiff]
+nansafe_mode = true

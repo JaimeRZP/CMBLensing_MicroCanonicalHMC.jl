@@ -205,29 +205,21 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]        
     push!(samples, sample)
             
-    io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
-        println(io, sample)
-        @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
-            try    
-                state = Step(sampler, target, state; kwargs...)
-                sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]    
-                push!(samples, sample)
-                println(io, sample)
-            catch err
-                if err isa InterruptException
-                    rethrow(err)
-                else
-                    @warn "Divergence encountered after tuning"
-                end
-            end        
-        end
+    @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
+        try    
+            state = Step(sampler, target, state; kwargs...)
+            sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]    
+            push!(samples, sample)
+        catch err
+            if err isa InterruptException
+                rethrow(err)
+            else
+                @warn "Divergence encountered after tuning"
+            end
+        end        
     end
-            
-    io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
-        ess, rhat = Summarize(samples)
-        println(io, ess)
-        println(io, rhat)
-    end         
+
+    # TODO: add back saving to file
                 
     return samples
 end
