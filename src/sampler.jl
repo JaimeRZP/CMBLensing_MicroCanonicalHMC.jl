@@ -129,8 +129,8 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     kwargs = Dict(kwargs)
     d = target.d
     ### initial conditions ###
-    if :initial_x ∈ keys(kwargs)
-        x = target.transform(kwargs[:initial_x])  
+    if :init_x ∈ keys(kwargs)
+        x = target.transform(kwargs[:init_x])  
     else
         x = target.prior_draw()
     end 
@@ -162,12 +162,7 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
     dEE = kinetic_change + ll - state.l
     
     if adaptive    
-        varE = dEE^2/d    
-
-        if dialog
-            println("eps: ", eps, " --> VarE/d: ", varE)
-        end             
-
+        varE = dEE^2/d               
         xi = varE/TEV + 1e-8   
         w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
         # Kalman update the linear combinations
@@ -184,9 +179,9 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
         
     return State(xx, uuu, ll, gg, dEE, Feps, Weps)   
 end  
-    
+        
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                fol_name=".", file_name="samples", kwargs...)
+                fol_name=".", file_name="samples", progress=true, kwargs...)
     """Args:
            num_steps: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
@@ -201,22 +196,26 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     end        
 
     state = Init(sampler, target; kwargs...)
-    state = tune_hyperparameters(sampler, target, state; kwargs...)
+    state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
             
     samples = []
-    sample = [target.inv_transform(state.x); state.dE; -state.l]        
+    sample = [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]        
     push!(samples, sample)
             
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
-        for i in 1:num_steps-1
+        @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
             try    
                 state = Step(sampler, target, state; kwargs...)
-                sample = [target.inv_transform(state.x); state.dE; -state.l]    
+                sample = [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]    
                 push!(samples, sample)
                 println(io, sample)
-            catch
-                @warn "Divergence encountered after tuning"
+            catch err
+                if err isa InterruptException
+                    rethrow(err)
+                else
+                    @warn "Divergence encountered after tuning"
+                end
             end        
         end
     end

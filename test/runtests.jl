@@ -28,4 +28,16 @@ using MicroCanonicalHMC
         
         @test dy == MicroCanonicalHMC.Minimal_norm
     end
+
+    @test "Partially_refresh_momentum"
+        d = 2
+        u = MicroCanonicalHMC.Random_unit_vector(d)
+        @test length(u) == d
+        @test norm(u) == 1.0
+
+        p = MicroCanonicalHMC.partially_refresh_momentum(0.1, d, u)
+        @test length(p) == d
+        @test norm(p) == 1.0
+    end
 end
+
