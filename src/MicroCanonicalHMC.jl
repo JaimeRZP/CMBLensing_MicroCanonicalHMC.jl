@@ -9,7 +9,7 @@ using Interpolations, LinearAlgebra, Statistics
 using Distributions, Random, ForwardDiff, Distributed, ProgressMeter
 using CMBLensing, Zygote, MCMCDiagnosticTools, AbstractMCMC
 
-abstract type Target end
+abstract type Target <: AbstractMCMC.AbstractModel end
 
 include("sampler.jl")
 include("targets.jl")
