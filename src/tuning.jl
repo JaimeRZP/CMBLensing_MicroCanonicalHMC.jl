@@ -94,7 +94,8 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, state::State; progress, kwargs...)
+function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
+                              progress=true, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings  
@@ -115,15 +116,25 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State; pr
         xs[1,:]=state.x[:]     
         @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
             state = Step(sampler, target, state; gamma=1.0, adaptive=true, kwargs...)   
-            xs[i,:]=state.x[:]                 
-        end            
-        sigma = vec(std(xs, dims=1))
-        if tune_sigma
-            sampler.hyperparameters.sigma = sigma
-        end
-        if tune_L
-            sampler.hyperparameters.L = mean(sigma) * sampler.hyperparameters.eps
-        end
+            xs[i,:]=state.x[:]
+            if mod(i, Int(nadapt/5))==0
+                if dialog
+                    println(string("Burn in step: ", i))
+                    println(string("eps --->" , sampler.hyperparameters.eps))
+                end            
+                sigma = vec(std(xs, dims=1))
+                if tune_sigma
+                    sampler.hyperparameters.sigma = sigma
+                end
+                if tune_L
+                    sampler.hyperparameters.L = mean(sigma) * sampler.hyperparameters.eps
+                    if dialog
+                        println(string("L   --->" , sampler.hyperparameters.L))
+                        println(" ")        
+                    end    
+                end
+            end
+        end    
     end    
     
     @info string("eps: ", sampler.hyperparameters.eps)

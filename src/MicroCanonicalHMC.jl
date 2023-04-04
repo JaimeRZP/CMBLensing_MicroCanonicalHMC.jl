@@ -6,10 +6,11 @@ export StandardGaussianTarget, CustomTarget, CMBLensingTarget
 export ParallelTarget
 
 using Interpolations, LinearAlgebra, Statistics
-using Distributions, Random, ForwardDiff, Distributed, ProgressMeter
+using Distributions, Random, ForwardDiff, Distributed
 using CMBLensing, Zygote, MCMCDiagnosticTools, AbstractMCMC
+using ProgressMeter
 
-abstract type Target <: AbstractMCMC.AbstractModel end
+abstract type Target end
 
 include("sampler.jl")
 include("targets.jl")
