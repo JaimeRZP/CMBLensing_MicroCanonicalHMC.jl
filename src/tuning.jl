@@ -94,7 +94,8 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, state::State; progress::Bool, kwargs...)
+function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
+                              progress=true, kwargs...)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings  

@@ -181,7 +181,7 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
 end
     
 function _make_sample(sampler::Sampler, target::Target, state::State)
-    return [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]  
+    return [target.inv_transform(state.x)[:]; sampler.hyperparameters.eps; state.dE; -state.l]  
 end                
         
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
