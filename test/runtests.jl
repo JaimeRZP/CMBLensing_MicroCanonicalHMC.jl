@@ -33,11 +33,11 @@ using MicroCanonicalHMC
         d = 2
         u = MicroCanonicalHMC.Random_unit_vector(d)
         @test length(u) == d
-        @test norm(u) == 1.0
+        @test sqrt(sum(u.^2)) == 1.0
 
         p = MicroCanonicalHMC.partially_refresh_momentum(0.1, d, u)
         @test length(p) == d
-        @test norm(p) == 1.0
+        @test sqrt(sum(p.^2)) == 1.0
     end
 end
 
