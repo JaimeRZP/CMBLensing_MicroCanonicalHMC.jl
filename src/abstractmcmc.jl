@@ -219,8 +219,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
             _sampler = samplers[i]
             _target = targets[i]
             _init = inits[i]
-            state, sample = _init
-            tune_hyperparameters(_sampler, _target, state; kwargs...)
+            _init = tune_hyperparameters(_sampler, _target, _init; progress=progress, kwargs...)
         end
 
     else
