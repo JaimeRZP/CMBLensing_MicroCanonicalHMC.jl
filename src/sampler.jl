@@ -19,7 +19,6 @@ Hyperparameters(;kwargs...) = begin
    Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
 end
 
-<<<<<<< HEAD
 mutable struct Settings
     nadapt::Int
     TEV::Float64
@@ -31,40 +30,6 @@ mutable struct Settings
     init_sigma
 end
 
-=======
-mutable struct Hyperparameters
-    eps::Float64
-    L::Float64
-    nu::Float64
-    lambda_c::Float64
-    sigma
-    gamma::Float64
-    sigma_xi::Float64
-end
-
-Hyperparameters(;kwargs...) = begin
-   eps = get(kwargs, :eps, 0.0)
-   L = get(kwargs, :L, 0.0)
-   nu = get(kwargs, :nu, 0.0)
-   sigma = get(kwargs, :sigma, [0.0])
-   lambda_c = get(kwargs, :lambda_c, 0.1931833275037836) 
-   gamma = get(kwargs, :gamma, (50-1)/(50+1)) #(neff-1)/(neff+1) 
-   sigma_xi = get(kwargs, :sigma_xi, 1.5)
-   Hyperparameters(eps, L, nu, lambda_c, sigma, gamma, sigma_xi)
-end
-
-mutable struct Settings
-    nadapt::Int
-    TEV::Float64
-    nchains::Int
-    adaptive::Bool
-    integrator::String
-    init_eps
-    init_L
-    init_sigma
-end
-
->>>>>>> fbf910d7020f52694fc36314e2d70b6e915bc7a3
 Settings(;kwargs...) = begin
     kwargs = Dict(kwargs)
     nadapt = get(kwargs, :nadapt, 1000)
@@ -243,7 +208,6 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     sample = _make_sample(sampler, target, state)      
     push!(samples, sample)
             
-<<<<<<< HEAD
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
@@ -260,20 +224,6 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
                 end
             end        
         end
-=======
-    @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
-        try    
-            state = Step(sampler, target, state; kwargs...)
-            sample = [target.inv_transform(state.x)[:]; state.g[:]; state.dE; -state.l]    
-            push!(samples, sample)
-        catch err
-            if err isa InterruptException
-                rethrow(err)
-            else
-                @warn "Divergence encountered after tuning"
-            end
-        end        
->>>>>>> fbf910d7020f52694fc36314e2d70b6e915bc7a3
     end
 
     # TODO: add back saving to file
