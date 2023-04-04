@@ -178,7 +178,11 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
     end
         
     return State(xx, uuu, ll, gg, dEE, Feps, Weps)   
-end  
+end
+    
+function _make_sample(sampler::Sampler, target::Target, state::State)
+    return [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]  
+end                
         
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
                 fol_name=".", file_name="samples", progress=true, kwargs...)
@@ -199,7 +203,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
             
     samples = []
-    sample = [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]        
+    sample = _make_sample(sampler, target, state)       
     push!(samples, sample)
             
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
@@ -207,7 +211,7 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
         @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
             try    
                 state = Step(sampler, target, state; kwargs...)
-                sample = [target.inv_transform(state.x); sampler.hyperparameters.eps; state.dE; -state.l]    
+                sample = _make_sample(sampler, target, state)  
                 push!(samples, sample)
                 println(io, sample)
             catch err

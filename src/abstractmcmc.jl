@@ -1,4 +1,3 @@
-
 const PROGRESS = Ref(true)
 
 function AbstractMCMC.step(sampler::Sampler, target::Target, state; kwargs...)
@@ -8,21 +7,21 @@ end
 function AbstractMCMC.sample(model::DynamicPPL.Model,
                              sampler::Sampler, #AbstractMCMC.AbstractSampler,
                              N::Int;
+                             progress=true,   
                              resume_from=nothing,
                              kwargs...)
 
     if resume_from === nothing
         target = TuringTarget(model)
-        state, sample = Init(sampler, target; kwargs...)
-        state, sample = tune_hyperparameters(sampler, target, state; kwargs...)
-        init = (state, sample)
+        init = Init(sampler, target; kwargs...)
+        init = tune_hyperparameters(sampler, target, init; progress=progress, kwargs...)
     else
         @info "Starting from previous run"
         target = resume_from.info[:target]
         sampler = resume_from.info[:sampler]
         init = resume_from.info[:init]
     end
-    return AbstractMCMC.mcmcsample(target, sampler, init, N; kwargs...)
+    return AbstractMCMC.mcmcsample(target, sampler, init, N; progress=progress, kwargs...)
 
 end
 
@@ -46,7 +45,8 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     start = time()
     local state
     # Obtain the initial sample and state.
-    state, sample = init
+    state = init
+    smpl = _make_sample(sampler, target, state)
 
     @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
         # Determine threshold values for progress logging
@@ -65,15 +65,16 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             end
 
             # Obtain the next sample and state.
-            state, sample = AbstractMCMC.step(sampler, target, state; kwargs...)
+            state = AbstractMCMC.step(sampler, target, state; kwargs...)
+            smpl = _make_sample(sampler, target, state)
         end
 
         # Run callback.
-        callback === nothing || callback(rng, target, sampler, sample, state, 1; kwargs...)
+        callback === nothing || callback(rng, target, sampler, smpl, state, 1; kwargs...)
 
         # Save the sample.
         samples = AbstractMCMC.samples(sample, target, sampler, N; kwargs...)
-        samples = AbstractMCMC.save!!(samples, sample, 1, target, sampler, N; kwargs...)
+        samples = AbstractMCMC.save!!(samples, smpl, 1, target, sampler, N; kwargs...)
 
         # Update the progress bar.
         itotal = 1 + burn_in
@@ -87,7 +88,8 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             # Discard thinned samples.
             for _ in 1:(thinning - 1)
                 # Obtain the next sample and state.
-                state, sample = AbstractMCMC.step(sampler, target, state; kwargs...)
+                state = AbstractMCMC.step(sampler, target, state; kwargs...)
+                smpl = _make_sample(sampler, target, state)
 
                 # Update progress bar.
                 if progress && (itotal += 1) >= next_update
@@ -97,13 +99,14 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             end
 
             # Obtain the next sample and state.
-            state, sample = AbstractMCMC.step(sampler, target, state; kwargs...)
+            state = AbstractMCMC.step(sampler, target, state; kwargs...)
+            smpl = _make_sample(sampler, target, state)
 
             # Run callback.
             callback === nothing || callback(rng, target, sampler, sample, state, i; kwargs...)
 
             # Save the sample.
-            samples = AbstractMCMC.save!!(samples, sample, 1, target, sampler, N; kwargs...)
+            samples = AbstractMCMC.save!!(samples, smpl, 1, target, sampler, N; kwargs...)
 
             # Update the progress bar.
             if progress && (itotal += 1) >= next_update
@@ -117,7 +120,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     stop = time()
     duration = stop - start
     stats = AbstractMCMC.SamplingStats(start, stop, duration)
-
+    
     return AbstractMCMC.bundle_samples(
     samples,
     target,
@@ -142,13 +145,13 @@ function AbstractMCMC.bundle_samples(
     kwargs...)
 
     param_names = target.vsyms
-    internal_names = [:E, :logp]
+    internal_names = [:eps, :E, :logp]
     names = [param_names; internal_names]
 
     # Set up the info tuple.
     if save_state
         info = (target=target, sampler=sampler,
-                init=(state, samples[end]))
+                init=state)
     else
         info = NamedTuple()
     end
