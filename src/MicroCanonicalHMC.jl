@@ -1,14 +1,12 @@
 module MicroCanonicalHMC
 
-export Settings, Hyperparameters, MCHMC, Sample
-export Leapfrog, Minimal_norm
-export StandardGaussianTarget, CustomTarget, CMBLensingTarget
-export ParallelTarget
 
-using Interpolations, LinearAlgebra, Statistics
-using Distributions, Random, ForwardDiff, Distributed
-using CMBLensing, Zygote, MCMCDiagnosticTools, AbstractMCMC
-using ProgressMeter
+using AbstractMCMC, Adapt, CMBLensing, Distributed, Distributions, 
+    DocStringExtensions, ForwardDiff, HDF5, Interpolations, LinearAlgebra, 
+    MCMCDiagnosticTools, Markdown, ProgressMeter, Random, Statistics, Zygote
+
+export CMBLensingTarget, CustomTarget, Hyperparameters, Leapfrog, MCHMC, 
+    Minimal_norm, ParallelTarget, Sample, Settings, StandardGaussianTarget
 
 abstract type Target end
 
@@ -16,6 +14,7 @@ include("sampler.jl")
 include("targets.jl")
 include("tuning.jl")
 include("integrators.jl")
+include("chains.jl")
 include("CMBLensing_utils.jl")
 
 include("ensemble/targets.jl")

@@ -190,43 +190,45 @@ function _make_sample(sampler::Sampler, target::Target, state::State)
     return [target.inv_transform(state.x)[:]; state.g[:]; sampler.hyperparameters.eps; state.dE; -state.l]
 end        
     
+
+"""
+    $(TYPEDSIGNATURES)
+
+Sample from the target distribution using the provided sampler.
+
+Keyword arguments:
+* `file_name` — if provided, save chain to disk (in HDF5 format)
+* `file_chunk` — write to disk only once every `file_chunk` steps
+  (default: 10)
+ 
+Returns: a vector of samples
+"""        
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                fol_name=".", file_name="samples", progress=true, kwargs...)
-    """Args:
-           num_steps: number of integration steps to take.
-           x_initial: initial condition for x (an array of shape (target dimension, )).
-                      It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
-           random_key: jax radnom seed, e.g. jax.random.PRNGKey(42).
-        Returns:
-            samples (shape = (num_steps, self.Target.d))
-    """        
+                file_name=nothing, file_chunk=10, progress=true, kwargs...)
 
     state = Init(sampler, target; kwargs...)
     state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
             
-    samples = []
     sample = _make_sample(sampler, target, state)      
-    push!(samples, sample)
-            
-    io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
-        println(io, sample)
-        @showprogress "MCHMC: " (progress ? 1 : Inf) for i in 1:num_steps-1
-            try    
-                state = Step(sampler, target, state; kwargs...)
-                sample = _make_sample(sampler, target, state)  
-                push!(samples, sample)
-                println(io, sample)
-            catch err
-                if err isa InterruptException
-                    rethrow(err)
-                else
-                    @warn "Divergence encountered after tuning"
-                end
-            end        
+    samples = similar(sample, (length(sample), num_steps))
+
+    pbar = Progress(num_steps, (progress ? 0 : Inf), "MCHMC: ")
+
+    write_chain(file_name, size(samples)..., eltype(sample), file_chunk) do chain_file
+        for i in 1:num_steps
+            state = Step(sampler, target, state; kwargs...)
+            samples[:,i] = sample = _make_sample(sampler, target, state)
+            if chain_file !== nothing
+                push!(chain_file, sample)
+            end
+            ProgressMeter.next!(pbar, showvalues = [
+                ("ϵ", sampler.hyperparameters.eps),
+                ("dE/d", state.dE / target.d)
+            ])
         end
     end
 
-    # TODO: add back saving to file
-                
+    ProgressMeter.finish!(pbar)
+
     return samples
 end
