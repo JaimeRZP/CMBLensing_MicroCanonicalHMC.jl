@@ -103,38 +103,29 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
     # Tuning
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     nadapt = sampler.settings.nadapt
-    
-    # Tune eps
-    if tune_eps
-        for i in 1:nadapt
-            state = Step(sampler, target, state; gamma=1.0, adaptive=true, kwargs...)
-        end
-    end
-    # Tune L
-    if tune_L || tune_sigma    
-        xs = state.x[:]    
-        @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
-            state = Step(sampler, target, state; gamma=1.0, adaptive=true, kwargs...)   
-            xs = [xs state.x[:]]
-            if mod(i, Int(nadapt/5))==0
-                if dialog
-                    println(string("Burn in step: ", i))
-                    println(string("eps --->" , sampler.hyperparameters.eps))
-                end            
-                sigma = vec(std(xs, dims=1))
-                if tune_sigma
-                    sampler.hyperparameters.sigma = sigma
-                end
-                if tune_L
-                    sampler.hyperparameters.L = mean(sigma) * sampler.hyperparameters.eps
-                    if dialog
-                        println(string("L   --->" , sampler.hyperparameters.L))
-                        println(" ")        
-                    end    
-                end
+       
+    xs = state.x[:]    
+    @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
+        state = Step(sampler, target, state; adaptive=tune_eps, kwargs...)   
+        xs = [xs state.x[:]]
+        if mod(i, Int(nadapt/5))==0
+            if dialog
+                println(string("Burn in step: ", i))
+                println(string("eps --->" , sampler.hyperparameters.eps))
+            end            
+            sigma = vec(std(xs, dims=1))
+            if tune_sigma
+                sampler.hyperparameters.sigma = sigma
             end
-        end    
-    end    
+            if tune_L
+                sampler.hyperparameters.L = mean(sigma) * sampler.hyperparameters.eps
+                if dialog
+                    println(string("L   --->" , sampler.hyperparameters.L))
+                    println(" ")        
+                end    
+            end
+        end
+    end 
     
     @info string("eps: ", sampler.hyperparameters.eps)
     @info string("L: ", sampler.hyperparameters.L) 
