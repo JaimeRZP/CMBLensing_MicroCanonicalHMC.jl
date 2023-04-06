@@ -32,15 +32,16 @@ end
 Wrap the Turing model inside a MicrocanonicalHMC.jl target:
 
 ```julia
-target = TuringTarget(funnel_model; d=d, compute_MAP=false)
+target = TuringTarget(funnel_model)
 ```
 
 
 ### Define the Sampler
 
 ```julia
-spl = MCHMC(0.0, 0.0; varE_wanted=0.001, sigma=ones(d))
-ensemble_spl = MCHMC(0.0, 0.0, 10; varE_wanted=0.001, sigma=ones(d))
+nadapt = 10_000
+TEV = 0.001
+spl = MCHMC(nadapt, TEV)
 ```
 The first two entries mean that the step size and the trajectory length will be self-tuned. In the ensemble sampler, the third number represents the number of workers.
 `VaE_wanted` sets the hamiltonian error per dimension that will be targeted. Fixing `sigma=ones(d)` avoids tunin the preconditioner.
@@ -48,8 +49,7 @@ The first two entries mean that the step size and the trajectory length will be 
 ### Start Sampling
 
 ```julia
-samples_mchmc = Sample(spl, target, 50_000; burn_in=5_000, dialog=false)
-samples_mchmc_ensemble = Sample(ensemble_spl, target, 50_000; burn_in=5_000, dialog=false)
+samples_mchmc = Sample(spl, target, 100_000)
 ```
 
 ### Compare to NUTS
@@ -67,7 +67,6 @@ samples_hmc = sample(funnel_model, NUTS(5_000, 0.95), 50_000; progress=true, sav
 ## Using MicroCanonicalHMC.jl with AbstractMCMC.jl
 
 ```julia
-samples_hmc = sample(funnel_model, spl, 50_000; progress=true, save_state=true)
+samples_hmc = sample(funnel_model, spl, 100_000; progress=true, save_state=true)
 ```
-
 Note that we are passing the `Turing` model directly instead of the `Target` object.
