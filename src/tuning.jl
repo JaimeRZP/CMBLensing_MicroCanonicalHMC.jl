@@ -113,12 +113,11 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
                 println(string("Burn in step: ", i))
                 println(string("eps --->" , sampler.hyperparameters.eps))
             end            
-            sigma = vec(std(xs, dims=1))
+            sigma = vec(std(xs, dims=2)) 
             if tune_sigma
                 sampler.hyperparameters.sigma = sigma
             end
             if tune_L
-                
                 sampler.hyperparameters.L = sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
                 if dialog
                     println(string("L   --->" , sampler.hyperparameters.L))

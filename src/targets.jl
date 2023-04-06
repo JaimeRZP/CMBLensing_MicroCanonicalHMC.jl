@@ -1,4 +1,5 @@
 mutable struct TuringTarget <: Target
+    rng::MersenneTwister
     model::DynamicPPL.Model
     d::Int
     vsyms
@@ -6,12 +7,9 @@ mutable struct TuringTarget <: Target
     nlogp::Function
     grad_nlogp::Function
     nlogp_grad_nlogp::Function
-    hess_nlogp::Function
     transform::Function
     inv_transform::Function
     prior_draw::Function
-    MAP::AbstractVector
-    MAP_t::AbstractVector
 end
 
 function _get_dists(vi)
@@ -34,7 +32,7 @@ function _name_variables(vi, dist_lengths)
     return names
 end
 
-TuringTarget(model; compute_MAP=false, kwargs...) = begin
+TuringTarget(model; rng=0, kwargs...) = begin
     ctxt = model.context
     vi = DynamicPPL.VarInfo(model, ctxt)
     vi_t = Turing.link!!(vi, model)
@@ -42,6 +40,7 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
     dist_lengths = [length(dist) for dist in dists]
     vsyms = _name_variables(vi, dist_lengths)
     d = length(vsyms)
+    rng = MersenneTwister(rng)                
 
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
     ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
@@ -81,10 +80,6 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
         return -1 .* ∂lπ∂θ(xt)
     end
 
-    function hess_nlogp(xt)
-        return ForwardDiff.hessian(nlogp, xt)
-    end
-
     function prior_draw()
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
@@ -92,14 +87,8 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
         return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
-    if compute_MAP
-        MAP_t = Optim.minimizer(optimize(nlogp, prior_draw(), Newton(); autodiff = :forward))
-        MAP = inv_transform(MAP_t)
-    else
-        MAP = MAP_t = zeros(d)
-    end
-
     TuringTarget(
+               rng,                                         
                model,
                d,
                vsyms,
@@ -107,16 +96,14 @@ TuringTarget(model; compute_MAP=false, kwargs...) = begin
                nlogp,
                grad_nlogp,
                nlogp_grad_nlogp,
-               hess_nlogp,
                transform,
                inv_transform,
-               prior_draw,
-               MAP,
-               MAP_t)
+               prior_draw)
 end
 
 
 mutable struct CustomTarget <: Target
+    rng::MersenneTwister                                                    
     d::Int
     vsyms                                                            
     nlogp::Function
@@ -126,9 +113,10 @@ mutable struct CustomTarget <: Target
     prior_draw::Function
 end
 
-CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
+CustomTarget(nlogp, grad_nlogp, priors; rng=0, kwargs...) = begin
     d = length(priors)
     vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d]
+    rng = MersenneTwister(rng)                                                             
 
     function transform(x)
         xt = x
@@ -146,7 +134,9 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
         return xt
     end
 
-    CustomTarget(d,
+    CustomTarget(
+               rng,
+               d,
                nlogp,
                grad_nlogp,
                transform,
@@ -155,6 +145,7 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
 end
 
 mutable struct GaussianTarget <: Target
+    rng::MersenneTwister                                                                            
     d::Int
     vsyms                                                                                    
     nlogp::Function
@@ -165,9 +156,11 @@ mutable struct GaussianTarget <: Target
     prior_draw::Function
 end
 
-GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
+GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix; rng=0) = begin
     d = length(_mean)
-    vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d]                                                                     
+    vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d]                                            
+    rng = MersenneTwister(rng)                                                                                    
+                                                                                        
     _gaussian = MvNormal(_mean, _cov)
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
@@ -203,7 +196,9 @@ GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
         return xt
     end
 
-    GaussianTarget(d,
+    GaussianTarget(
+    rng,
+    d,
     vsyms,                                                                                                                    
     nlogp,
     grad_nlogp,
@@ -214,7 +209,9 @@ GaussianTarget(_mean::AbstractVector ,_cov::AbstractMatrix) = begin
 end
 
 mutable struct RosenbrockTarget <: Target
+    rng::MersenneTwister  
     d::Int
+    vsyms                                
     nlogp::Function
     grad_nlogp::Function
     nlogp_grad_nlogp::Function
@@ -229,10 +226,12 @@ struct Rosenbrock{Tμ,Ta,Tb}
     b::Tb
 end
 
-RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
+RosenbrockTarget(Tμ, Ta, Tb; rng=0, kwargs...) = begin
     kwargs = Dict(kwargs)
     D = Rosenbrock(Tμ, Ta, Tb)
     d = kwargs[:d]
+    vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d] 
+    rng = MersenneTwister(rng)
 
     block = [1.0 D.μ; D.μ 1.0]
     _cov = BlockDiagonal([block for _ in 1:(d/2)])
@@ -282,7 +281,10 @@ RosenbrockTarget(Tμ, Ta, Tb; kwargs...) = begin
         return xt
     end
 
-    RosenbrockTarget(d,
+    RosenbrockTarget(
+    rng,
+    d,
+    vsyms,
     nlogp,
     grad_nlogp,
     nlogp_grad_nlogp,

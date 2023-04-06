@@ -68,20 +68,21 @@ function MCHMC(nadapt, TEV; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(d)
+function Random_unit_vector(rng::MersenneTwister, d::Int)
     """Generates a random (isotropic) unit vector."""    
-    return normalize(randn(d))
+    return normalize(randn(rng, d))
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
-    return Partially_refresh_momentum(sampler.hyperparameters.nu,
+    return Partially_refresh_momentum(target.rng,
+                                      sampler.hyperparameters.nu,
                                       target.d,
                                       u)
 end
 
-function Partially_refresh_momentum(nu, d, u::AbstractVector)
-    z = nu .* Random_unit_vector(d)
+function Partially_refresh_momentum(rng::MersenneTwister, nu::Float64, d::Int, u::AbstractVector)
+    z = nu .* Random_unit_vector(rng, d)
     uu = u .+ z
     return normalize(uu)
 end
