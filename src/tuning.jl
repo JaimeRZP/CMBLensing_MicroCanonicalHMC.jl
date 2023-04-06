@@ -118,7 +118,8 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
                 sampler.hyperparameters.sigma = sigma
             end
             if tune_L
-                sampler.hyperparameters.L = mean(sigma) * sampler.hyperparameters.eps
+                
+                sampler.hyperparameters.L = sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
                 if dialog
                     println(string("L   --->" , sampler.hyperparameters.L))
                     println(" ")        
