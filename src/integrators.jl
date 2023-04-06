@@ -9,18 +9,20 @@ function Leapfrog(target::Target,
                   x::AbstractVector, u::AbstractVector,
                   l::Number, g::AbstractVector)
     d = target.d
+    
+    # go to the latent space
+    z = x ./ sigma 
+    
+    #half step in momentum
     uu, dr1 = Update_momentum(d, eps * 0.5, g .* sigma, u)
 
     #full step in x
-    z = x ./ sigma # go to the latent space
     zz = z .+ eps .* uu
     xx = zz .* sigma # rotate back to parameter space
     ll, gg = target.nlogp_grad_nlogp(xx)
-    gg .*= d/(d-1)
 
     #half step in momentum
     uu, dr2 = Update_momentum(d, eps * 0.5, gg .* sigma, uu)
-
     kinetic_change = (dr1 + dr2) * target.d
 
     return xx, uu, ll, gg, kinetic_change

@@ -92,9 +92,8 @@ function Update_momentum(d::Number, eff_eps::Number,
     """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
     g_norm = norm(g)
     e = - g ./ g_norm
-    delta = eff_eps * g_norm / (d-1)
-    ue = dot(u, e)    
-
+    ue = dot(u, e)
+    delta = eff_eps * g_norm / (d-1)    
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
             
