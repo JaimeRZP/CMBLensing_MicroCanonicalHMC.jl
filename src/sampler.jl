@@ -51,21 +51,27 @@ struct Sampler <: AbstractMCMC.AbstractSampler
 end
 
 function MCHMC(nadapt, TEV; kwargs...)
+    """the MCHMC (q = 0 Hamiltonian) sampler"""
+    sett = Settings(;nadapt=nadapt, TEV=TEV, kwargs...)
+    hyperparameters = Hyperparameters(;kwargs...)
+    
+    ### integrator ###
+    if sett.integrator == "LF" # leapfrog
+        hamiltonian_dynamics = Leapfrog
+        grad_evals_per_step = 1.0
+    elseif sett.integrator == "MN" # minimal norm
+        hamiltonian_dynamics = Minimal_norm
+        grad_evals_per_step = 2.0
+    else
+        println(string("integrator = ", integrator, "is not a valid option."))
+    end
 
-   sett = Settings(;nadapt=nadapt, TEV=TEV, kwargs...)
-   hyperparameters = Hyperparameters(;kwargs...)
+    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
+end
 
-   if sett.integrator == "LF"  # leapfrog
-       hamiltonian_dynamics = Leapfrog
-       grad_evals_per_step = 1.0
-   elseif sett.integrator == "MN"  # minimal norm integrator
-       hamiltonian_dynamics = Minimal_norm
-       grad_evals_per_step = 2.0
-   else
-       println(string("integrator = ", integrator, "is not a valid option."))
-   end
-
-   return Sampler(sett, hyperparameters, hamiltonian_dynamics)
+function Random_unit_vector(target::Target)
+    """Generates a random (isotropic) unit vector."""    
+    return normalize(randn(target.rng, target.d))
 end
 
 function Random_unit_vector(rng::MersenneTwister, d::Int)
@@ -89,14 +95,15 @@ end
 
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
-    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
+    """The momentum updating map of the esh dynamics (see https://arxiv.org/pdf/2111.02434.pdf)
+    similar to the implementation: https://github.com/gregversteeg/esh_dynamics
+    There are no exponentials e^delta, which prevents overflows when the gradient norm is large."""   
     g_norm = norm(g)
     e = - g ./ g_norm
     ue = dot(u, e)
     delta = eff_eps * g_norm / (d-1)    
     zeta = exp(-delta)
-    uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
-            
+    uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u         
     delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
     return normalize(uu), delta_r
 end
@@ -132,8 +139,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
         x = target.prior_draw()
     end 
     l, g = target.nlogp_grad_nlogp(x)
-    g .*= d/(d-1)
-    u = -g ./ sqrt.(sum(g.^2))        
+    u = Random_unit_vector(target)        
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1/6) 
     return State(x, u, l, g, 0.0, Feps, Weps)
@@ -154,13 +160,16 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
         
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
-    # add noise to the momentum direction
+    # Langevin-like noise
     uuu = Partially_refresh_momentum(sampler, target, uu)   
     dEE = kinetic_change + ll - state.l
     
     if adaptive    
-        varE = dEE^2/d               
-        xi = varE/TEV + 1e-8   
+        varE = dEE^2/d
+        # 1e-8 is added to avoid divergences in log xi        
+        xi = varE/TEV + 1e-8 
+        # the weight which reduces the impact of stepsizes which 
+        # are much larger on much smaller than the desired one.        
         w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
         # Kalman update the linear combinations
         Feps = gamma * state.Feps + w * (xi/eps^6)  
