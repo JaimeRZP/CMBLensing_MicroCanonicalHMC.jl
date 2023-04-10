@@ -69,11 +69,6 @@ function MCHMC(nadapt, TEV; kwargs...)
     return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(target::Target)
-    """Generates a random (isotropic) unit vector."""    
-    return normalize(randn(target.rng, target.d))
-end
-
 function Random_unit_vector(rng::MersenneTwister, d::Int)
     """Generates a random (isotropic) unit vector."""    
     return normalize(randn(rng, d))
