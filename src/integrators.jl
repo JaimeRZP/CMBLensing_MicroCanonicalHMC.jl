@@ -8,20 +8,22 @@ function Leapfrog(target::Target,
                   eps::Number, sigma::AbstractVector,
                   x::AbstractVector, u::AbstractVector,
                   l::Number, g::AbstractVector)
+    """leapfrog"""
     d = target.d
+    # go to the latent space
+    z = x ./ sigma 
+    
+    #half step in momentum
     uu, dr1 = Update_momentum(d, eps * 0.5, g .* sigma, u)
 
     #full step in x
-    z = x ./ sigma # go to the latent space
     zz = z .+ eps .* uu
     xx = zz .* sigma # rotate back to parameter space
     ll, gg = target.nlogp_grad_nlogp(xx)
-    gg .*= d/(d-1)
 
     #half step in momentum
     uu, dr2 = Update_momentum(d, eps * 0.5, gg .* sigma, uu)
-
-    kinetic_change = (dr1 + dr2) * target.d
+    kinetic_change = (dr1 + dr2) * (d - 1)
 
     return xx, uu, ll, gg, kinetic_change
 end
@@ -40,25 +42,31 @@ function Minimal_norm(target::Target,
                       x::AbstractVector, u::AbstractVector,
                       l::Number, g::AbstractVector)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
-    # V T V T V
     d = target.d
+    # go to the latent space
+    z = x ./ sigma 
+    
+    # V T V T V
+    #V (momentum update)
     uu, dr1 = Update_momentum(d, eps * lambda_c, g .* sigma, u)
 
-    z = x ./ sigma # go to the latent space
-    zz = z .+ eps .* 0.5 .* uu
-    xx = zz .* sigma
+    #T (postion update)
+    zz = z .+ (0.5 * eps) .* uu
+    xx = sigma .* zz
     ll, gg = target.nlogp_grad_nlogp(xx)
-    gg .*= d/(d-1)
-
+    
+    #V (momentum update)
     uu, dr2 = Update_momentum(d, eps * (1 - 2 * lambda_c), gg .* sigma, uu)
-
-    zz = zz .+ eps .* 0.5 .* uu
+    
+    #T (postion update)
+    zz = zz .+ (0.5 * eps) .* uu
     xx = zz .* sigma
     ll, gg = target.nlogp_grad_nlogp(xx)
-    gg .*= d/(d-1)
-
+    
+    #V (momentum update)
     uu, dr3 = Update_momentum(d, eps * lambda_c, gg .* sigma, uu)
-
+    
+    #kinetic energy change
     kinetic_change = (dr1 + dr2 + dr3) * (d -1)
 
     return xx, uu, ll, gg, kinetic_change
