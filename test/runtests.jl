@@ -1,6 +1,7 @@
 using Test
 using MicroCanonicalHMC
 using LinearAlgebra
+using Random
 
 @testset "All tests" begin
 
@@ -32,11 +33,12 @@ using LinearAlgebra
 
     @testset "Partially_refresh_momentum" begin
         d = 10
-        u = MicroCanonicalHMC.Random_unit_vector(d)
+        rng = MersenneTwister(0)
+        u = MicroCanonicalHMC.Random_unit_vector(rng, d)
         @test length(u) == d
         @test isapprox(norm(u),  1.0, rtol=0.0000001)
 
-        p = MicroCanonicalHMC.Partially_refresh_momentum(0.1, d, u)
+        p = MicroCanonicalHMC.Partially_refresh_momentum(rng, 0.1, d, u)
         @test length(p) == d
         @test isapprox(norm(p),  1.0, rtol=0.0000001)
     end
