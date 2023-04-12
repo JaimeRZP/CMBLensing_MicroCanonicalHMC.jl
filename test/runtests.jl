@@ -42,4 +42,34 @@ using Random
         @test length(p) == d
         @test isapprox(norm(p),  1.0, rtol=0.0000001)
     end
+
+    @testset "Init" begin
+        d = 10
+        m = zeros(d)
+        s = Diagonal(ones(d))
+        target = GaussianTarget(m, s)
+        spl = MCHMC(0, 0.001)
+        init = MicroCanonicalHMC.Init(spl, target; init_x=m)
+        @test init.x == m
+        @test init.g == m
+        @test init.dE == init.Feps == 0.0
+        @test init.Weps ==  1.0e-5
+    end
+
+    @testset "Step" begin
+        d = 10
+        m = zeros(d)
+        s = Diagonal(ones(d))
+        target = GaussianTarget(m, s)
+        aspl = spl = MCHMC(0, 0.001; eps=0.1, L=0.1, sigma=ones(d))
+        tune_sigma, tune_eps, tune_L = tune_what(spl, target)
+        tune_sigma, tune_eps, tune_L = tune_what(aspl, target)
+        @test tune_sigma == tune_eps == tune_L == false
+        init = MicroCanonicalHMC.Init(spl, target; init_x=m)
+        step = MicroCanonicalHMC.Step(spl, target; init_x=m)
+        astep = MicroCanonicalHMC.Step(aspl, target; init_x=m, adaptive=true)
+        @test spl.hyperparameters.eps == 0.1
+        @test aspl.hyperparameters.eps != 0.1
+        @test step.x == astep.x 
+    end
 end
