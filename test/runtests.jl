@@ -61,15 +61,16 @@ using Random
         m = zeros(d)
         s = Diagonal(ones(d))
         target = GaussianTarget(m, s)
-        aspl = spl = MCHMC(0, 0.001; eps=0.1, L=0.1, sigma=ones(d))
-        tune_sigma, tune_eps, tune_L = tune_what(spl, target)
-        tune_sigma, tune_eps, tune_L = tune_what(aspl, target)
+        spl = MCHMC(0, 0.001; eps=0.01, L=0.1, sigma=ones(d))
+        aspl = MCHMC(0, 0.001; eps=0.01, L=0.1, sigma=ones(d), adaptive=true)
+        init = MicroCanonicalHMC.Init(spl, target)
+        tune_sigma, tune_eps, tune_L = MicroCanonicalHMC.tune_what(spl, target)
+        tune_sigma, tune_eps, tune_L = MicroCanonicalHMC.tune_what(aspl, target)
         @test tune_sigma == tune_eps == tune_L == false
-        init = MicroCanonicalHMC.Init(spl, target; init_x=m)
-        step = MicroCanonicalHMC.Step(spl, target; init_x=m)
-        astep = MicroCanonicalHMC.Step(aspl, target; init_x=m, adaptive=true)
-        @test spl.hyperparameters.eps == 0.1
-        @test aspl.hyperparameters.eps != 0.1
+        step = MicroCanonicalHMC.Step(spl, target, init)
+        astep = MicroCanonicalHMC.Step(aspl, target, init)
+        @test spl.hyperparameters.eps == 0.01
+        @test aspl.hyperparameters.eps != 0.01
         @test step.x == astep.x 
     end
 end

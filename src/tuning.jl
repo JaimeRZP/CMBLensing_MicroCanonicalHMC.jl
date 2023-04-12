@@ -132,7 +132,6 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
     @info string("nu: ", sampler.hyperparameters.nu)
     @info string("sigma: ", sampler.hyperparameters.sigma)
     @info string("adaptive: ", sampler.settings.adaptive)         
-    # ====
-
+    
     return state
 end
