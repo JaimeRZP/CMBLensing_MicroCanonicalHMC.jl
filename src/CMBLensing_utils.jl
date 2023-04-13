@@ -1,7 +1,7 @@
-function Random_unit_vector(sampler::Sampler, target::CMBLensingTarget;
+function Random_unit_vector(target::CMBLensingTarget;
                             normalize=true)
     """Generates a random (isotropic) unit vector."""
-    u = simulate(Diagonal(one(LenseBasis(diag(target.Λmass)))))
+    u = simulate(target.rng, Diagonal(one(LenseBasis(diag(target.Λmass)))))
     if normalize
         u ./=  sqrt.(sum(u.^2))
     end
@@ -11,7 +11,7 @@ end
 function Partially_refresh_momentum(sampler::Sampler, target::CMBLensingTarget, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
     nu = sampler.hyperparameters.nu
-    z = nu .* Random_unit_vector(sampler, target; normalize=false)
+    z = nu .* Random_unit_vector(target; normalize=false)
     uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
     return uu
 end

@@ -87,6 +87,7 @@ StandardGaussianTarget(; kwargs...) = begin
 end
 
 mutable struct CMBLensingTarget <: Target
+    rng::MersenneTwister 
     d::Int
     Λmass
     nlogp::Function
@@ -97,12 +98,13 @@ mutable struct CMBLensingTarget <: Target
     prior_draw::Function
 end
 
-CMBLensingTarget(prob; kwargs...) = begin
+CMBLensingTarget(prob; rng=0, kwargs...) = begin
     Ωstart = prob.Ωstart
     d = length(Ωstart)
     Λmass = real(prob.Λmass)
     sqrtΛmass = sqrt(Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
+    rng = MersenneTwister(rng)
 
     function transform(x)
         xt = CMBLensing.LenseBasis(sqrtΛmass * x)
@@ -132,7 +134,8 @@ CMBLensingTarget(prob; kwargs...) = begin
         return CMBLensing.LenseBasis(xt)
     end
 
-    CMBLensingTarget(d,
+    CMBLensingTarget(rng,
+                     d,
                      Λmass,
                      nlogp,
                      grad_nlogp,
