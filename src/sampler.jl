@@ -69,14 +69,18 @@ function MCHMC(nadapt, TEV; kwargs...)
     return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
     
-function Random_unit_vector(target::Target)
+function Random_unit_vector(target::Target; _normalize=true)
     """Generates a random (isotropic) unit vector."""    
-    return normalize(randn(target.rng, target.d))
+    return Random_unit_vector(target.rng, target.d; _normalize=_normalize)
 end    
 
-function Random_unit_vector(rng::MersenneTwister, d::Int)
-    """Generates a random (isotropic) unit vector."""    
-    return normalize(randn(rng, d))
+function Random_unit_vector(rng::MersenneTwister, d::Int; _normalize=true)
+    """Generates a random (isotropic) unit vector."""
+    u = randn(rng, d)
+    if _normalize
+        u = normalize(u)
+    end        
+    return u
 end
 
 function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
@@ -88,7 +92,7 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u::Abstrac
 end
 
 function Partially_refresh_momentum(rng::MersenneTwister, nu::Float64, d::Int, u::AbstractVector)
-    z = nu .* Random_unit_vector(rng, d)
+    z = nu .* Random_unit_vector(rng, d; _normalize=false)
     uu = u .+ z
     return normalize(uu)
 end
