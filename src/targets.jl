@@ -220,35 +220,16 @@ mutable struct RosenbrockTarget <: Target
     prior_draw::Function
 end
 
-struct Rosenbrock{Tμ,Ta,Tb}
-    μ::Tμ #Off diag size
-    a::Ta
-    b::Tb
-end
-
-RosenbrockTarget(Tμ, Ta, Tb; rng=0, kwargs...) = begin
+RosenbrockTarget(a, b; rng=0, kwargs...) = begin
     kwargs = Dict(kwargs)
-    D = Rosenbrock(Tμ, Ta, Tb)
     d = kwargs[:d]
     vsyms = [DynamicPPL.VarName(Symbol("d_", i,)) for i in 1:d] 
     rng = MersenneTwister(rng)
 
-    block = [1.0 D.μ; D.μ 1.0]
-    _cov = BlockDiagonal([block for _ in 1:(d/2)])
-
-    function _mean(θ::AbstractVector)
-        i = floor.(Int,(1:(d/2)))
-        even_i = floor.(Int, 2 .* i)
-        odd_i = floor.(Int, 2 .* i .- 1)
-        u = ones(d)
-        u[even_i] .= θ[even_i] ./ D.a
-        u[odd_i] .= D.a .* (θ[odd_i] .- D.b .* (θ[even_i] .^ 2 .+ D.a ^ 2))
-        return u
+    function ℓπ(x, y; a=a, b=b)
+        m = @.((a - x)^2 + b * (y - x^2)^2)
+        return -0.5 * sum(m)
     end
-
-    rosenbrock(θ::AbstractVector) = MvNormal(_mean(θ), _cov)
-    ℓπ(θ::AbstractVector) = logpdf(rosenbrock(θ), θ)
-    ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(rosenbrock(θ), θ)
 
     function transform(x)
         xt = x
@@ -262,12 +243,13 @@ RosenbrockTarget(Tμ, Ta, Tb; rng=0, kwargs...) = begin
 
     function nlogp(x)
         xt = transform(x)
-        return -ℓπ(xt)
+        xt_1 = xt[1:Int(d/2)]
+        xt_2 = xt[Int(d/2)+1:end]
+        return -ℓπ(xt_1, xt_2)
     end
 
     function grad_nlogp(x)
-        xt = transform(x)
-        return -∂lπ∂θ(xt)
+        return ForwardDiff.gradient(nlogp, x)
     end
 
     function nlogp_grad_nlogp(x)
