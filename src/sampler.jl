@@ -51,10 +51,11 @@ struct Sampler <: AbstractMCMC.AbstractSampler
 end
 
 function MCHMC(nadapt, TEV; kwargs...)
-
+   """the MCHMC (q = 0 Hamiltonian) sampler"""
    sett = Settings(;nadapt=nadapt, TEV=TEV, kwargs...)
    hyperparameters = Hyperparameters(;kwargs...)
 
+   ### integrator ###
    if sett.integrator == "LF"  # leapfrog
        hamiltonian_dynamics = Leapfrog
        grad_evals_per_step = 1.0
@@ -98,16 +99,16 @@ end
 
 function Update_momentum(d::Number, eff_eps::Number,
                          g::AbstractVector, u::AbstractVector)
-    """The momentum updating map of the ESH dynamics (see https://arxiv.org/pdf/2111.02434.pdf)"""    
+    """The momentum updating map of the esh dynamics (see https://arxiv.org/pdf/2111.02434.pdf)
+    similar to the implementation: https://github.com/gregversteeg/esh_dynamics
+    There are no exponentials e^delta, which prevents overflows when the gradient norm is large."""   
     g_norm = sqrt(sum(g.^2))
     e = - g ./ g_norm
     delta = eff_eps * g_norm / (d-1)
     ue = dot(u, e)    
-
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
     uu ./= sqrt(sum(uu.^2))
-            
     delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
     return uu, delta_r
 end
