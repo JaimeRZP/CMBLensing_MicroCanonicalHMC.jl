@@ -69,10 +69,17 @@ function MCHMC(nadapt, TEV; kwargs...)
    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(rng::MersenneTwister, d::Int)
+function Random_unit_vector(target::Target; _normalize=true)
     """Generates a random (isotropic) unit vector."""    
+    return Random_unit_vector(target.rng, target.d; _normalize=_normalize)
+end    
+
+function Random_unit_vector(rng::MersenneTwister, d::Int; _normalize=true)
+    """Generates a random (isotropic) unit vector."""
     u = randn(rng, d)
-    u ./= sqrt(sum(u.^2))
+    if _normalize
+        u = normalize(u)
+    end        
     return u
 end
 
@@ -85,9 +92,9 @@ function Partially_refresh_momentum(sampler::Sampler, target::Target, u::Abstrac
 end
 
 function Partially_refresh_momentum(rng::MersenneTwister, nu::Float64, d::Int, u::AbstractVector)
-    z = nu .* Random_unit_vector(rng, d)
-    uu = (u .+ z) ./ sqrt(sum((u .+ z).^2))
-    return uu
+    z = nu .* Random_unit_vector(rng, d; _normalize=false)
+    uu = u .+ z
+    return normalize(uu)
 end
 
 function Update_momentum(d::Number, eff_eps::Number,
@@ -137,7 +144,7 @@ function Init(sampler::Sampler, target::Target; kwargs...)
         x = target.prior_draw()
     end 
     l, g = target.nlogp_grad_nlogp(x)
-    u = Random_unit_vector(sampler, target)
+    u = Random_unit_vector(target)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1/6) 
     return State(x, u, l, g, 0.0, Feps, Weps)
@@ -163,11 +170,8 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
     dEE = kinetic_change + ll - state.l
     
     if adaptive    
-        varE = dEE^2/d             
-        # 1e-8 is added to avoid divergences in log xi  
-        xi = varE/TEV + 1e-8
-        # the weight which reduces the impact of stepsizes which 
-        # are much larger on much smaller than the desired one.   
+        varE = dEE^2/d               
+        xi = varE/TEV + 1e-8   
         w = exp(-0.5*(log(xi)/(6.0 * sigma_xi))^2)
         # Kalman update the linear combinations
         Feps = gamma * state.Feps + w * (xi/eps^6)  

@@ -105,7 +105,7 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix; rng=0) = begin
 end
                                                         
 mutable struct CMBLensingTarget <: Target
-    rng::MersenneTwister                                                         
+    rng::MersenneTwister 
     d::Int
     Λmass
     nlogp::Function
@@ -122,7 +122,8 @@ CMBLensingTarget(prob; rng=0, kwargs...) = begin
     Λmass = real(prob.Λmass)
     sqrtΛmass = sqrt(Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
-    rng = MersenneTwister(rng)                                                             
+    rng = MersenneTwister(rng)
+
 
     function transform(x)
         xt = CMBLensing.LenseBasis(sqrtΛmass * x)
@@ -152,8 +153,7 @@ CMBLensingTarget(prob; rng=0, kwargs...) = begin
         return CMBLensing.LenseBasis(xt)
     end
 
-    CMBLensingTarget(
-                     rng,
+    CMBLensingTarget(rng,
                      d,
                      Λmass,
                      nlogp,
