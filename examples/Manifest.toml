@@ -201,8 +201,8 @@ version = "0.10.0"
 
 [[deps.CMBLensingInferenceTestProblem]]
 deps = ["CMBLensing", "CUDA", "ComponentArrays", "JLD2", "LaTeXStrings", "LinearAlgebra", "LogDensityProblems", "MCMCDiagnosticTools", "Memoization", "Plots", "ProgressMeter", "Zygote"]
-git-tree-sha1 = "0d2f41491b09a9374c193338c9772b202976801e"
-repo-rev = "690bf85"
+git-tree-sha1 = "a3edb344d13f99909dd60a772668fe68522fdbc6"
+repo-rev = "1d6bd9c250c87d186864ee641d27af938ee6eefd"
 repo-url = "https://github.com/marius311/CMBLensingInferenceTestProblem"
 uuid = "77eb751d-b138-43db-8fbb-26307a053bc2"
 version = "0.1.0"
