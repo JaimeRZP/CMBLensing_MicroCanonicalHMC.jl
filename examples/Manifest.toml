@@ -179,8 +179,8 @@ version = "4.0.0+0"
 
 [[deps.CMBLensing]]
 deps = ["AbstractFFTs", "Adapt", "Bijections", "ChainRules", "CodecZlib", "Combinatorics", "ComponentArrays", "CompositeStructs", "CoordinateTransformations", "DataStructures", "DelimitedFiles", "Distributed", "Distributions", "EllipsisNotation", "FFTW", "FileIO", "Formatting", "ForwardDiff", "Healpix", "ImageFiltering", "ImageMorphology", "Images", "InteractiveUtils", "Interpolations", "IterTools", "JLD2", "KahanSummation", "Lazy", "Libdl", "LinearAlgebra", "Loess", "MacroTools", "Markdown", "Match", "Measurements", "Memoization", "NFFT", "NamedTupleTools", "Optim", "PDMats", "Pkg", "PlotUtils", "Preferences", "Printf", "ProgressMeter", "QuadGK", "Random", "RecipesBase", "Requires", "Roots", "Rotations", "Serialization", "Setfield", "SnoopPrecompile", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "TimerOutputs", "Tullio", "UnPack", "Zygote"]
-git-tree-sha1 = "e483d42de0669ce0c28522d8485c8d8716940630"
-repo-rev = "078e6ad40a80e6e5dc51a228373261415950c58b"
+git-tree-sha1 = "6be64713b5b01e889240c943589909d958915312"
+repo-rev = "83e0e38671c988c52a7f04816df9e9a0370158c7"
 repo-url = "https://github.com/marius311/CMBLensing.jl.git"
 uuid = "b60c06c0-7e54-11e8-3788-4bd722d65317"
 version = "0.10.0"
