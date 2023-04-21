@@ -108,8 +108,6 @@ function Update_momentum(d::Number, eff_eps::Number,
     ue = dot(u, e)    
     zeta = exp(-delta)
     uu = e .* ((1-zeta) * (1 + zeta + ue * (1-zeta))) + (2 * zeta) .* u
-    uu.θ.r = 0.0
-    uu.θ.Aϕ = 0.0      
     uu ./= sqrt(sum(uu.^2))
     delta_r = delta - log(2) + log(1 + ue + (1-ue) * zeta^2)  
     return uu, delta_r

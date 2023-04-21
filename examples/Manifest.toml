@@ -200,9 +200,9 @@ version = "0.10.0"
     PythonPlot = "274fc56d-3b97-40fa-a1cd-1b4a50311bf9"
 
 [[deps.CMBLensingInferenceTestProblem]]
-deps = ["CMBLensing", "CUDA", "ComponentArrays", "JLD2", "LaTeXStrings", "LinearAlgebra", "LogDensityProblems", "MCMCDiagnosticTools", "Memoization", "Plots", "ProgressMeter", "Zygote"]
-git-tree-sha1 = "a3edb344d13f99909dd60a772668fe68522fdbc6"
-repo-rev = "1d6bd9c250c87d186864ee641d27af938ee6eefd"
+deps = ["CMBLensing", "CUDA", "ComponentArrays", "JLD2", "LaTeXStrings", "LinearAlgebra", "LogDensityProblems", "MCMCDiagnosticTools", "Memoization", "NamedTupleTools", "Plots", "ProgressMeter", "Zygote"]
+git-tree-sha1 = "f646f6fab8956e4bff92d6f7e2d2e5ce652ae74d"
+repo-rev = "5d73b08"
 repo-url = "https://github.com/marius311/CMBLensingInferenceTestProblem"
 uuid = "77eb751d-b138-43db-8fbb-26307a053bc2"
 version = "0.1.0"
