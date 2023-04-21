@@ -39,6 +39,14 @@ function tune_what(sampler::Sampler, target::Target)
     return tune_sigma, tune_eps, tune_L
 end
 
+function Summarize(samples::AbstractMatrix)
+    dim_a, dim_b = size(samples)
+    _samples = zeros(dim_a, 1, dim_b)
+    _samples[:, 1, :] = samples
+    ess, rhat = MCMCDiagnosticTools.ess_rhat(_samples)
+    return ess, rhat
+end
+
 function Summarize(samples::AbstractVector)
     _samples = zeros(length(samples), 1, length(samples[1]))
     _samples[:, 1, :] = mapreduce(permutedims, vcat, samples)
