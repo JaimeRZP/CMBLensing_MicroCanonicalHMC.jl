@@ -206,7 +206,7 @@ Keyword arguments:
 Returns: a vector of samples
 """        
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                thining::Int=1, file_name=nothing, file_chunk=10, progress=true, kwargs...)
+                thinning::Int=1, file_name=nothing, file_chunk=10, progress=true, kwargs...)
 
     state = Init(sampler, target; kwargs...)
     state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
@@ -219,9 +219,10 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
     write_chain(file_name, size(samples)..., eltype(sample), file_chunk) do chain_file
         for i in 1:num_steps
             state = Step(sampler, target, state; kwargs...)
-            samples[:,i] = sample = _make_sample(sampler, target, state)
-            if chain_file !== nothing
-                if mod(i, thinning)==0        
+            if mod(i, thinning)==0
+                j = Int(floor(i/thinning))
+                samples[:,j] = sample = _make_sample(sampler, target, state)
+                if chain_file !== nothing      
                     push!(chain_file, sample)
                 end
             end
