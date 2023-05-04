@@ -189,7 +189,7 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
 end
     
 function _make_sample(sampler::Sampler, target::Target, state::State)
-    return [target.inv_transform(state.x)[:]; state.x[:]; sampler.hyperparameters.eps; state.dE; -state.l]
+    return [target.inv_transform(state.x)[:]; sampler.hyperparameters.eps; state.dE; -state.l]
 end        
     
 
@@ -206,14 +206,14 @@ Keyword arguments:
 Returns: a vector of samples
 """        
 function Sample(sampler::Sampler, target::Target, num_steps::Int;
-                file_name=nothing, file_chunk=10, progress=true, kwargs...)
+                thining::Int=1, file_name=nothing, file_chunk=10, progress=true, kwargs...)
 
     state = Init(sampler, target; kwargs...)
     state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
             
-    sample = _make_sample(sampler, target, state)      
-    samples = similar(sample, (length(sample), num_steps))
-
+    sample = _make_sample(sampler, target, state)
+    samples = similar(sample, (length(sample), Int(floor(num_steps/thinning))))   
+            
     pbar = Progress(num_steps, (progress ? 0 : Inf), "MCHMC: ")
 
     write_chain(file_name, size(samples)..., eltype(sample), file_chunk) do chain_file
@@ -221,7 +221,9 @@ function Sample(sampler::Sampler, target::Target, num_steps::Int;
             state = Step(sampler, target, state; kwargs...)
             samples[:,i] = sample = _make_sample(sampler, target, state)
             if chain_file !== nothing
-                push!(chain_file, sample)
+                if mod(i, thinning)==0        
+                    push!(chain_file, sample)
+                end
             end
             ProgressMeter.next!(pbar, showvalues = [
                 ("ϵ", sampler.hyperparameters.eps),
