@@ -112,10 +112,10 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     nadapt = sampler.settings.nadapt
        
-    xs = state.x[:]    
+    xs = adapt(Array, state.x[:])    
     @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
         state = Step(sampler, target, state; adaptive=tune_eps, kwargs...)   
-        xs = [xs state.x[:]]
+        xs = [xs adapt(Array, state.x[:])]
         if mod(i, Int(nadapt/5))==0
             if dialog
                 println(string("Burn in step: ", i))
