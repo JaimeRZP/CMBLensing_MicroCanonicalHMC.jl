@@ -189,7 +189,7 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
 end
     
 function _make_sample(sampler::Sampler, target::Target, state::State)
-    return  Array([target.inv_transform(state.x)[:]; sampler.hyperparameters.eps; state.dE; -state.l])
+    return  Array([target.inv_transform(state.x)[:]; state.x[:]; sampler.hyperparameters.eps; state.dE; -state.l])
 end        
     
 
