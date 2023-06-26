@@ -1,8 +1,8 @@
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.9.0-rc2"
+julia_version = "1.9.1"
 manifest_format = "2.0"
-project_hash = "a14f4fd34045238b7bb60ab90abd4ba34d7449f1"
+project_hash = "616cfe67ae83077b8ea3d2723b800ba3267f95a8"
 
 [[deps.AbstractDifferentiation]]
 deps = ["ExprTools", "LinearAlgebra", "Requires"]
@@ -178,9 +178,9 @@ uuid = "b3e40c51-02ae-5482-8a39-3ace5868dcf4"
 version = "4.0.0+0"
 
 [[deps.CMBLensing]]
-deps = ["AbstractFFTs", "Adapt", "Bijections", "ChainRules", "CodecZlib", "Combinatorics", "ComponentArrays", "CompositeStructs", "CoordinateTransformations", "DataStructures", "DelimitedFiles", "Distributed", "Distributions", "EllipsisNotation", "FFTW", "FileIO", "Formatting", "ForwardDiff", "Healpix", "ImageFiltering", "ImageMorphology", "Images", "InteractiveUtils", "Interpolations", "IterTools", "JLD2", "KahanSummation", "Lazy", "Libdl", "LinearAlgebra", "Loess", "MacroTools", "Markdown", "Match", "Measurements", "Memoization", "NFFT", "NamedTupleTools", "Optim", "PDMats", "Pkg", "PlotUtils", "Preferences", "Printf", "ProgressMeter", "QuadGK", "Random", "RecipesBase", "Requires", "Roots", "Rotations", "Serialization", "Setfield", "SnoopPrecompile", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "TimerOutputs", "Tullio", "UnPack", "Zygote"]
-git-tree-sha1 = "6be64713b5b01e889240c943589909d958915312"
-repo-rev = "83e0e38671c988c52a7f04816df9e9a0370158c7"
+deps = ["AbstractFFTs", "Adapt", "Bijections", "ChainRules", "CodecZlib", "Combinatorics", "ComponentArrays", "CompositeStructs", "CoordinateTransformations", "DataStructures", "DelimitedFiles", "Distributed", "Distributions", "EllipsisNotation", "FFTW", "FileIO", "Formatting", "ForwardDiff", "Healpix", "ImageFiltering", "ImageMorphology", "Images", "InteractiveUtils", "Interpolations", "IterTools", "JLD2", "KahanSummation", "Lazy", "Libdl", "LinearAlgebra", "Loess", "MCMCDiagnosticTools", "MacroTools", "Markdown", "Match", "Measurements", "Memoization", "NFFT", "NamedTupleTools", "Optim", "PDMats", "Pkg", "PlotUtils", "PrecompileTools", "Preferences", "Printf", "ProgressMeter", "QuadGK", "Random", "RecipesBase", "Requires", "Roots", "Rotations", "Serialization", "Setfield", "SparseArrays", "StaticArrays", "Statistics", "StatsBase", "TimerOutputs", "Tullio", "UnPack", "Zygote"]
+git-tree-sha1 = "390d930c3141e999a990a0b67a4ff0fd63b4b75c"
+repo-rev = "98e7eb8"
 repo-url = "https://github.com/marius311/CMBLensing.jl.git"
 uuid = "b60c06c0-7e54-11e8-3788-4bd722d65317"
 version = "0.10.0"
@@ -201,9 +201,9 @@ version = "0.10.0"
 
 [[deps.CMBLensingInferenceTestProblem]]
 deps = ["CMBLensing", "CUDA", "ComponentArrays", "JLD2", "LaTeXStrings", "LinearAlgebra", "LogDensityProblems", "MCMCDiagnosticTools", "Memoization", "NamedTupleTools", "Plots", "ProgressMeter", "Zygote"]
-git-tree-sha1 = "f646f6fab8956e4bff92d6f7e2d2e5ce652ae74d"
-repo-rev = "5d73b08"
-repo-url = "https://github.com/marius311/CMBLensingInferenceTestProblem"
+git-tree-sha1 = "3568a8f70f2828b33826302e6ba475c520268b06"
+repo-rev = "5241301"
+repo-url = "https://github.com/marius311/CMBLensingInferenceTestProblem.git"
 uuid = "77eb751d-b138-43db-8fbb-26307a053bc2"
 version = "0.1.0"
 
@@ -1461,6 +1461,12 @@ git-tree-sha1 = "17275485f373e6673f7e7f97051f703ed5b15b20"
 uuid = "85a6dd25-e78a-55b7-8502-1745935b8125"
 version = "0.2.4"
 
+[[deps.PrecompileTools]]
+deps = ["Preferences"]
+git-tree-sha1 = "9673d39decc5feece56ef3940e5dafba15ba0f81"
+uuid = "aea7be01-6a6a-4083-8856-8a6e6704d82a"
+version = "1.1.2"
+
 [[deps.Preferences]]
 deps = ["TOML"]
 git-tree-sha1 = "47e5f437cc0e7ef2ce8406ce1e7e24d44915f88d"
@@ -2129,7 +2135,7 @@ version = "0.15.1+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.4.0+0"
+version = "5.8.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
