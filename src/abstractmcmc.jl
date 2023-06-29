@@ -2,17 +2,17 @@ function AbstractMCMC.step(
     rng::Random.AbstractRNG,
     sampler::MCHMCSampler,
     target::Target;
-    kwargs...
+    kwargs...,
 )
     return Step(rng, sampler, target; kwargs...)
-end 
+end
 
 function AbstractMCMC.step(
     rng::Random.AbstractRNG,
     sampler::MCHMCSampler,
     target::Target,
     state::MCHMCState;
-    kwargs...
+    kwargs...,
 )
     return Step(rng, sampler, target, state; kwargs...)
-end               
+end

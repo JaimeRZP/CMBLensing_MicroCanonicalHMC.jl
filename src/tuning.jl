@@ -35,7 +35,7 @@ function tune_what(sampler::MCHMCSampler, target::Target)
     end
 
     tune_nu!(sampler, target)
-    
+
     return tune_sigma, tune_eps, tune_L
 end
 
@@ -58,8 +58,8 @@ function Neff(samples, l::Int)
     ess, rhat = Summarize(samples)
     neff = ess ./ l
     return 1.0 / mean(1 ./ neff)
-end   
-    
+end
+
 function eval_nu(eps, L, d)
     nu = sqrt((exp(2 * eps / L) - 1.0) / d)
     return nu
@@ -77,45 +77,46 @@ function tune_hyperparameters(
     sampler::MCHMCSampler,
     target::Target,
     state::MCHMCState;
-    progress=true,
-    kwargs...
+    progress = true,
+    kwargs...,
 )
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings  
-    
+    sett = sampler.settings
+
     # Tuning
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     nadapt = sampler.settings.nadapt
- 
-    xs = state.x[:]      
-    @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
-        _, state = Step(rng, sampler, target, state; adaptive=tune_eps, kwargs...)   
+
+    xs = state.x[:]
+    @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i = 2:nadapt
+        _, state = Step(rng, sampler, target, state; adaptive = tune_eps, kwargs...)
         xs = [xs state.x[:]]
-        if mod(i, Int(nadapt/5))==0
+        if mod(i, Int(nadapt / 5)) == 0
             if dialog
                 println(string("Burn in step: ", i))
-                println(string("eps --->" , sampler.hyperparameters.eps))
-            end            
-            sigma = vec(std(xs, dims=2)) 
+                println(string("eps --->", sampler.hyperparameters.eps))
+            end
+            sigma = vec(std(xs, dims = 2))
             if tune_sigma
                 sampler.hyperparameters.sigma = sigma
             end
             if tune_L
-                sampler.hyperparameters.L = sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
+                sampler.hyperparameters.L =
+                    sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
                 if dialog
-                    println(string("L   --->" , sampler.hyperparameters.L))
-                    println(" ")        
-                end    
+                    println(string("L   --->", sampler.hyperparameters.L))
+                    println(" ")
+                end
             end
         end
-    end               
-    
+    end
+
     @info string("eps: ", sampler.hyperparameters.eps)
-    @info string("L: ", sampler.hyperparameters.L) 
+    @info string("L: ", sampler.hyperparameters.L)
     @info string("nu: ", sampler.hyperparameters.nu)
     @info string("sigma: ", sampler.hyperparameters.sigma)
-    @info string("adaptive: ", sampler.settings.adaptive)         
-    
+    @info string("adaptive: ", sampler.settings.adaptive)
+
     return state
 end
