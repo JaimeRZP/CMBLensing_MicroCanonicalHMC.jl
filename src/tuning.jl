@@ -1,4 +1,4 @@
-function tune_what(sampler::Sampler, target::Target)
+function tune_what(sampler::MCHMCSampler, target::Target)
     tune_sigma, tune_eps, tune_L = false, false, false
 
     if sampler.hyperparameters.sigma == [0.0]
@@ -58,52 +58,28 @@ function Neff(samples, l::Int)
     ess, rhat = Summarize(samples)
     neff = ess ./ l
     return 1.0 / mean(1 ./ neff)
-end
-
-function Virial_loss(x::AbstractVector, g::AbstractVector)
-"""loss^2 = (1/d) sum_i (virial_i - 1)^2"""
-
-    #should be all close to 1 if we have reached the typical set
-    v = mean(x .* g)  # mean over params
-    return sqrt.((v .- 1.0).^2)
-end
-
-function Step_burnin(sampler::Sampler, target::Target, init::State; kwargs...)
-    dialog = get(kwargs, :dialog, false)
-    step = Step(sampler, target, init)
-    lloss = Virial_loss(step.x, step.g)    
-    return lloss, step
-end
-
-function Init_burnin(sampler::Sampler, target::Target,
-                     init::State; kwargs...)
-    dialog = get(kwargs, :dialog, false)
-    x = init.x
-    g = init.g
-    v = mean(x .* g, dims=1)
-    loss = mean((1 .- v).^2)
-
-    if dialog
-        println("Initial Virial loss: ", loss)
-    end
-
-    return  loss, init
-end    
+end   
     
 function eval_nu(eps, L, d)
     nu = sqrt((exp(2 * eps / L) - 1.0) / d)
     return nu
 end
 
-function tune_nu!(sampler::Sampler, target::Target)
+function tune_nu!(sampler::MCHMCSampler, target::Target)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
     d = target.d
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
-                              progress=true, kwargs...)
+function tune_hyperparameters(
+    rgn::Random.AbstractRNG,
+    sampler::MCHMCSampler,
+    target::Target,
+    state::MCHMCState;
+    progress=true,
+    kwargs...
+)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
     sett = sampler.settings  
@@ -114,7 +90,7 @@ function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
  
     xs = state.x[:]      
     @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
-        state = Step(sampler, target, state; adaptive=tune_eps, kwargs...)   
+        _, state = Step(rng, sampler, target, state; adaptive=tune_eps, kwargs...)   
         xs = [xs state.x[:]]
         if mod(i, Int(nadapt/5))==0
             if dialog

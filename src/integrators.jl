@@ -1,13 +1,18 @@
-function Leapfrog(sampler::Sampler, target::Target, state::State)
+function Leapfrog(sampler::MCHMCSampler, target::Target, state::MCHMCState)
     eps = sampler.hyperparameters.eps
     sigma = sampler.hyperparameters.sigma
     return Leapfrog(target, eps, sigma, state.x, state.u, state.l, state.g)
 end
 
-function Leapfrog(target::Target,
-                  eps::Number, sigma::AbstractVector,
-                  x::AbstractVector, u::AbstractVector,
-                  l::Number, g::AbstractVector)
+function Leapfrog(
+    target::Target,
+    eps::Number,
+    sigma::AbstractVector,
+    x::AbstractVector,
+    u::AbstractVector,
+    l::Number,
+    g::AbstractVector
+)
     """leapfrog"""
     d = target.d
     # go to the latent space
@@ -28,7 +33,7 @@ function Leapfrog(target::Target,
     return xx, uu, ll, gg, kinetic_change
 end
 
-function Minimal_norm(sampler::Sampler, target::Target, state::State)
+function Minimal_norm(sampler::MCHMCSampler, target::Target, state::MCHMCState)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
     eps = sampler.hyperparameters.eps
@@ -37,10 +42,16 @@ function Minimal_norm(sampler::Sampler, target::Target, state::State)
     return Minimal_norm(target, eps, lambda_c, sigma, state.x, state.u, state.l, state.g)
 end
 
-function Minimal_norm(target::Target,
-                      eps::Number, lambda_c::Number, sigma::AbstractVector,
-                      x::AbstractVector, u::AbstractVector,
-                      l::Number, g::AbstractVector)
+function Minimal_norm(
+    target::Target,
+    eps::Number,
+    lambda_c::Number,
+    sigma::AbstractVector,
+    x::AbstractVector,
+    u::AbstractVector,
+    l::Number,
+    g::AbstractVector
+)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     d = target.d
     # go to the latent space
