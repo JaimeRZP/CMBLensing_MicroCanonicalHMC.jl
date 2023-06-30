@@ -69,7 +69,7 @@ function MCHMC(nadapt, TEV; kwargs...)
 end
 
 function Random_unit_vector(rng::Random.AbstractRNG, target::Target; _normalize = true)
-    return Random_unit_vector(rng, target.d; kwargs...)
+    return Random_unit_vector(rng, target.d; _normalize=_normalize)
 end
 
 function Random_unit_vector(rng::Random.AbstractRNG, d::Int; _normalize = true)
