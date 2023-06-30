@@ -136,7 +136,7 @@ struct State{T}
     Weps::T
 end
 
-function Init(sampler::Sampler, target::Target; kwargs...)
+function Step(sampler::Sampler, target::Target; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = target.d
@@ -150,7 +150,10 @@ function Init(sampler::Sampler, target::Target; kwargs...)
     u = Random_unit_vector(target)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
-    return State(x, u, l, g, 0.0, Feps, Weps)
+
+    state = State(x, u, l, g, 0.0, Feps, Weps)
+    transition = Transition(sampler, target, state)
+    return transition, state
 end
 
 function Step(sampler::Sampler, target::Target, state::State; kwargs...)
@@ -191,10 +194,12 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
         Weps = state.Weps
     end
 
-    return State(xx, uuu, ll, gg, dEE, Feps, Weps)
+    state = State(xx, uuu, ll, gg, dEE, Feps, Weps)
+    transition = Transition(sampler, target, state)
+    return transition, state
 end
 
-function _make_sample(sampler::Sampler, target::Target, state::State)
+function Transition(sampler::Sampler, target::Target, state::State)
     return [
         target.inv_transform(state.x)[:]
         sampler.hyperparameters.eps
@@ -225,21 +230,20 @@ function Sample(
         println(io, string(target.vsyms))
     end
 
-    state = Init(sampler, target; kwargs...)
+    _, state = Step(sampler, target; kwargs...)
     state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
 
-    samples = []
-    sample = _make_sample(sampler, target, state)
-    push!(samples, sample)
+    chain = []
+    transition = Transition(sampler, target, state)
+    push!(chain, transition)
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         @showprogress "MCHMC: " (progress ? 1 : Inf) for i = 1:num_steps-1
             try
-                state = Step(sampler, target, state; kwargs...)
-                sample = _make_sample(sampler, target, state)
-                push!(samples, sample)
-                println(io, sample)
+                transition, state = Step(sampler, target, state; kwargs...)
+                push!(chain, transition)
+                println(io, transition)
             catch err
                 if err isa InterruptException
                     rethrow(err)
@@ -251,10 +255,10 @@ function Sample(
     end
 
     io = open(joinpath(fol_name, string(file_name, "_summary.txt")), "w") do io
-        ess, rhat = Summarize(samples)
+        ess, rhat = Summarize(chain)
         println(io, ess)
         println(io, rhat)
     end
 
-    return samples
+    return chain
 end
