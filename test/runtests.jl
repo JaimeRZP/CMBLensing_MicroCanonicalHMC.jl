@@ -57,37 +57,40 @@ end
     d = 10
     m = zeros(d)
     s = Diagonal(ones(d))
+    rng = MersenneTwister(1234)
     target = GaussianTarget(m, s)
     spl = MCHMC(0, 0.001)
-    _, init = MicroCanonicalHMC.Step(spl, target; init_x = m)
+    _, init = MicroCanonicalHMC.Step(rng, spl, target; init_x = m)
     @test init.x == m
     @test init.g == m
     @test init.dE == init.Feps == 0.0
     @test init.Weps == 1.0e-5
 end
 
-@testset "Step" begin
+@testset "Step" begin 
     d = 10
     m = zeros(d)
     s = Diagonal(ones(d))
+    rng = MersenneTwister(1234)
     target = GaussianTarget(m, s)
     spl = MCHMC(0, 0.001; eps = 0.01, L = 0.1, sigma = ones(d))
     aspl = MCHMC(0, 0.001; eps = 0.01, L = 0.1, sigma = ones(d), adaptive = true)
-    _, init = MicroCanonicalHMC.Step(spl, target)
+    _, init = MicroCanonicalHMC.Step(rng, spl, target)
     tune_sigma, tune_eps, tune_L = MicroCanonicalHMC.tune_what(spl, target)
     tune_sigma, tune_eps, tune_L = MicroCanonicalHMC.tune_what(aspl, target)
     @test tune_sigma == tune_eps == tune_L == false
-    _, step = MicroCanonicalHMC.Step(spl, target, init)
-    _, astep = MicroCanonicalHMC.Step(aspl, target, init)
+    _, step = MicroCanonicalHMC.Step(rng, spl, target, init)
+    _, astep = MicroCanonicalHMC.Step(rng, aspl, target, init)
     @test spl.hyperparameters.eps == 0.01
     @test aspl.hyperparameters.eps != 0.01
     @test step.x == astep.x
 end
 
 @testset "Sample" begin
+    rng = MersenneTwister(1234)
     target = RosenbrockTarget(1.0, 10.0; d=2)
     spl = MCHMC(10_000, 0.01; L=sqrt(2), sigma=ones(target.d), adaptive=true)
-    samples = Sample(spl, target, 100_000; dialog=true)
+    samples = Sample(rng, spl, target, 100_000; dialog=true)
     d1 = [sample[1] for sample in samples]
     d2 = [sample[2] for sample in samples]
     mm1, m1, s1, = (median(d1), mean(d1), std(d1))

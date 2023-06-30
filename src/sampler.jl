@@ -68,12 +68,7 @@ function MCHMC(nadapt, TEV; kwargs...)
     return MCHMCSampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
-function Random_unit_vector(target::Target; _normalize = true)
-    """Generates a random (isotropic) unit vector."""
-    return Random_unit_vector(target.rng, target.d; _normalize = _normalize)
-end
-
-function Random_unit_vector(rng::MersenneTwister, d::Int; _normalize = true)
+function Random_unit_vector(rng::AbstractRNG, d::Int; _normalize = true)
     """Generates a random (isotropic) unit vector."""
     u = randn(rng, d)
     if _normalize
@@ -82,13 +77,8 @@ function Random_unit_vector(rng::MersenneTwister, d::Int; _normalize = true)
     return u
 end
 
-function Partially_refresh_momentum(sampler::MCHMCSampler, target::Target, u::AbstractVector)
-    """Adds a small noise to u and normalizes."""
-    return Partially_refresh_momentum(target.rng, sampler.hyperparameters.nu, target.d, u)
-end
-
 function Partially_refresh_momentum(
-    rng::MersenneTwister,
+    rng::AbstractRNG,
     nu::Float64,
     d::Int,
     u::AbstractVector,
@@ -122,7 +112,7 @@ struct MCHMCState{T}
     Weps::T
 end
 
-function Step(sampler::MCHMCSampler, target::Target; kwargs...)
+function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = target.d
@@ -133,7 +123,7 @@ function Step(sampler::MCHMCSampler, target::Target; kwargs...)
         x = target.prior_draw()
     end
     l, g = target.nlogp_grad_nlogp(x)
-    u = Random_unit_vector(target)
+    u = Random_unit_vector(rng, d)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
 
@@ -142,11 +132,12 @@ function Step(sampler::MCHMCSampler, target::Target; kwargs...)
     return transition, state
 end
 
-function Step(sampler::MCHMCSampler, target::Target, state::MCHMCState; kwargs...)
+function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MCHMCState; kwargs...)
     """One step of the Langevin-like dynamics."""
     dialog = get(kwargs, :dialog, false)
 
     eps = sampler.hyperparameters.eps
+    nu = sampler.hyperparameters.nu
     sigma_xi = sampler.hyperparameters.sigma_xi
     gamma = get(kwargs, :gamma, sampler.hyperparameters.gamma)
 
@@ -158,7 +149,7 @@ function Step(sampler::MCHMCSampler, target::Target, state::MCHMCState; kwargs..
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
     # Langevin-like noise
-    uuu = Partially_refresh_momentum(sampler, target, uu)
+    uuu = Partially_refresh_momentum(rng, nu, d, uu)
     dEE = kinetic_change + ll - state.l
 
     if adaptive
@@ -197,27 +188,40 @@ end
 function Sample(
     sampler::MCHMCSampler,
     target::Target,
-    num_steps::Int;
+    n::Int;
+    fol_name = ".",
+    file_name = "samples",
+    progress = true,
+    kwargs...,
+)
+    return Sample(Random.GLOBAL_RNG, sampler, target, n; kwargs...)
+end
+
+function Sample(
+    rng::AbstractRNG,
+    sampler::MCHMCSampler,
+    target::Target,
+    n::Int;
     fol_name = ".",
     file_name = "samples",
     progress = true,
     kwargs...,
 )
     """Args:
-           num_steps: number of integration steps to take.
+           n: number of integration steps to take.
            x_initial: initial condition for x (an array of shape (target dimension, )).
                       It can also be 'prior' in which case it is drawn from the prior distribution (self.Target.prior_draw).
            random_key: jax radnom seed, e.g. jax.random.PRNGKey(42).
         Returns:
-            samples (shape = (num_steps, self.Target.d))
+            samples (shape = (n, self.Target.d))
     """
 
     io = open(joinpath(fol_name, "VarNames.txt"), "w") do io
         println(io, string(target.vsyms))
     end
 
-    _, state = Step(sampler, target; kwargs...)
-    state = tune_hyperparameters(sampler, target, state; progress, kwargs...)
+    _, state = Step(rng, sampler, target; kwargs...)
+    state = tune_hyperparameters(rng, sampler, target, state; progress, kwargs...)
 
     chain = []
     transition = Transition(sampler, target, state)
@@ -225,9 +229,9 @@ function Sample(
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
-        @showprogress "MCHMC: " (progress ? 1 : Inf) for i = 1:num_steps-1
+        @showprogress "MCHMC: " (progress ? 1 : Inf) for i = 1:n-1
             try
-                transition, state = Step(sampler, target, state; kwargs...)
+                transition, state = Step(rng, sampler, target, state; kwargs...)
                 push!(chain, transition)
                 println(io, transition)
             catch err
