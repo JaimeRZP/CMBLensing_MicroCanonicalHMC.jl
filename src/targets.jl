@@ -5,9 +5,7 @@ mutable struct TuringTarget <: Target
     d::Int
     vsyms::Any
     dists::Any
-    nlogp::Function
-    grad_nlogp::Function
-    nlogp_grad_nlogp::Function
+    h::Hamiltonian
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -45,6 +43,7 @@ TuringTarget(model; kwargs...) = begin
     ℓ = LogDensityProblemsAD.ADgradient(DynamicPPL.LogDensityFunction(vi_t, model, ctxt))
     ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)
     ∂lπ∂θ(x) = LogDensityProblems.logdensity_and_gradient(ℓ, x)
+    hamiltonian = Hamiltonian(ℓπ, ∂lπ∂θ)
 
     function _reshape_params(x::AbstractVector)
         xx = []
@@ -68,18 +67,6 @@ TuringTarget(model; kwargs...) = begin
         return vcat(x...)
     end
 
-    function nlogp(xt)
-        return -ℓπ(xt)
-    end
-
-    function grad_nlogp(xt)
-        return ForwardDiff.gradient(nlogp, xt)
-    end
-
-    function nlogp_grad_nlogp(xt)
-        return -1 .* ∂lπ∂θ(xt)
-    end
-
     function prior_draw()
         ctxt = model.context
         vi = DynamicPPL.VarInfo(model, ctxt)
@@ -92,9 +79,7 @@ TuringTarget(model; kwargs...) = begin
         d,
         vsyms,
         dists,
-        nlogp,
-        grad_nlogp,
-        nlogp_grad_nlogp,
+        hamiltonian,
         transform,
         inv_transform,
         prior_draw,
@@ -105,8 +90,7 @@ end
 mutable struct CustomTarget <: Target
     d::Int
     vsyms::Any
-    nlogp::Function
-    grad_nlogp::Function
+    h::Hamiltonian
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -121,16 +105,14 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
         xt = transform(x)
         return xt
     end
-
-    CustomTarget(d, nlogp, grad_nlogp, NoTransform, NoTransform, prior_draw)
+    hamiltonian = Hamiltonian(nlogp, grad_nlogp)
+    CustomTarget(d, hamiltonian, NoTransform, NoTransform, prior_draw)
 end
 
 mutable struct GaussianTarget <: Target
     d::Int
     vsyms::Any
-    nlogp::Function
-    grad_nlogp::Function
-    nlogp_grad_nlogp::Function
+    h::Hamiltonian
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -142,16 +124,8 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix) = begin
 
     _gaussian = MvNormal(_mean, _cov)
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
-    ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
-
-    nlogp(x) = -ℓπ(x)
-    grad_nlogp(x) = -∂lπ∂θ(x)
-
-    function nlogp_grad_nlogp(x)
-        l = nlogp(x)
-        g = grad_nlogp(x)
-        return l, g
-    end
+    ∂lπ∂θ(θ::AbstractVector) = (logpdf(_gaussian, θ), gradlogpdf(_gaussian, θ))
+    hamiltonian = Hamiltonian(ℓπ, ∂lπ∂θ)
 
     function prior_draw()
         xt = rand(MvNormal(zeros(d), ones(d)))
@@ -161,9 +135,7 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix) = begin
     GaussianTarget(
         d,
         vsyms,
-        nlogp,
-        grad_nlogp,
-        nlogp_grad_nlogp,
+        hamiltonian,
         NoTransform,
         NoTransform,
         prior_draw,
@@ -173,9 +145,7 @@ end
 mutable struct RosenbrockTarget <: Target
     d::Int
     vsyms::Any
-    nlogp::Function
-    grad_nlogp::Function
-    nlogp_grad_nlogp::Function
+    h::Hamiltonian
     transform::Function
     inv_transform::Function
     prior_draw::Function
@@ -186,26 +156,18 @@ RosenbrockTarget(a, b; kwargs...) = begin
     d = kwargs[:d]
     vsyms = [DynamicPPL.VarName(Symbol("d_", i)) for i = 1:d]
 
-    function ℓπ(x, y; a = a, b = b)
-        m = @.((a - x)^2 + b * (y - x^2)^2)
+    function ℓπ(x; a=a, b=b)
+        x1 = x[1:Int(d / 2)]
+        x2 = x[Int(d / 2)+1:end]
+        m = @.((a - x1)^2 + b * (x2 - x1^2)^2)
         return -0.5 * sum(m)
     end
 
-    function nlogp(x)
-        x_1 = x[1:Int(d / 2)]
-        x_2 = x[Int(d / 2)+1:end]
-        return -ℓπ(x_1, x_2)
+    function ∂lπ∂θ(x)
+        return ℓπ(x), ForwardDiff.gradient(ℓπ, x)
     end
 
-    function grad_nlogp(x)
-        return ForwardDiff.gradient(nlogp, x)
-    end
-
-    function nlogp_grad_nlogp(x)
-        l = nlogp(x)
-        g = grad_nlogp(x)
-        return l, g
-    end
+    hamiltonian = Hamiltonian(ℓπ, ∂lπ∂θ)
 
     function prior_draw()
         x = rand(MvNormal(zeros(d), ones(d)))
@@ -215,9 +177,7 @@ RosenbrockTarget(a, b; kwargs...) = begin
     RosenbrockTarget(
         d,
         vsyms,
-        nlogp,
-        grad_nlogp,
-        nlogp_grad_nlogp,
+        hamiltonian,
         NoTransform,
         NoTransform,
         prior_draw,

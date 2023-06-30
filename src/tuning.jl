@@ -74,7 +74,7 @@ end
 function tune_hyperparameters(
     rng::AbstractRNG,
     sampler::MCHMCSampler,
-    target::Target,
+    h::Hamiltonian,
     state::MCHMCState;
     progress = true,
     kwargs...,
@@ -90,7 +90,7 @@ function tune_hyperparameters(
 
     xs = state.x[:]
     @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i = 2:nadapt
-        _, state = Step(rng, sampler, target, state; adaptive = tune_eps, kwargs...)
+        _, state = Step(rng, sampler, h, state; adaptive=tune_eps, kwargs...)
         xs = [xs state.x[:]]
         if mod(i, Int(nadapt / 5)) == 0
             if dialog

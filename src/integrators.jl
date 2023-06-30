@@ -1,11 +1,11 @@
-function Leapfrog(sampler::MCHMCSampler, target::Target, state::MCHMCState)
+function Leapfrog(sampler::MCHMCSampler, h::Hamiltonian, state::MCHMCState)
     eps = sampler.hyperparameters.eps
     sigma = sampler.hyperparameters.sigma
-    return Leapfrog(target, eps, sigma, state.x, state.u, state.l, state.g)
+    return Leapfrog(h, eps, sigma, state.x, state.u, state.l, state.g)
 end
 
 function Leapfrog(
-    target::Target,
+    h::Hamiltonian,
     eps::Number,
     sigma::AbstractVector,
     x::AbstractVector,
@@ -24,7 +24,7 @@ function Leapfrog(
     #full step in x
     zz = z .+ eps .* uu
     xx = zz .* sigma # rotate back to parameter space
-    ll, gg = target.nlogp_grad_nlogp(xx)
+    ll, gg = -1 .* h.∂lπ∂θ(xx)
 
     #half step in momentum
     uu, dr2 = Update_momentum(d, eps * 0.5, gg .* sigma, uu)
@@ -33,17 +33,17 @@ function Leapfrog(
     return xx, uu, ll, gg, kinetic_change
 end
 
-function Minimal_norm(sampler::MCHMCSampler, target::Target, state::MCHMCState)
+function Minimal_norm(sampler::MCHMCSampler, h::Hamiltonian, state::MCHMCState)
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
     # V T V T V
     eps = sampler.hyperparameters.eps
     lambda_c = sampler.hyperparameters.lambda_c
     sigma = sampler.hyperparameters.sigma
-    return Minimal_norm(target, eps, lambda_c, sigma, state.x, state.u, state.l, state.g)
+    return Minimal_norm(h, eps, lambda_c, sigma, state.x, state.u, state.l, state.g)
 end
 
 function Minimal_norm(
-    target::Target,
+    h::Hamiltonian,
     eps::Number,
     lambda_c::Number,
     sigma::AbstractVector,
@@ -64,7 +64,7 @@ function Minimal_norm(
     #T (postion update)
     zz = z .+ (0.5 * eps) .* uu
     xx = sigma .* zz
-    ll, gg = target.nlogp_grad_nlogp(xx)
+    ll, gg = -1 .* h.∂lπ∂θ(xx)
 
     #V (momentum update)
     uu, dr2 = Update_momentum(d, eps * (1 - 2 * lambda_c), gg .* sigma, uu)
@@ -72,7 +72,7 @@ function Minimal_norm(
     #T (postion update)
     zz = zz .+ (0.5 * eps) .* uu
     xx = zz .* sigma
-    ll, gg = target.nlogp_grad_nlogp(xx)
+    ll, gg = -1 .* h.∂lπ∂θ(xx)
 
     #V (momentum update)
     uu, dr3 = Update_momentum(d, eps * lambda_c, gg .* sigma, uu)

@@ -114,21 +114,23 @@ struct MCHMCState{T}
     Weps::T
 end
 
-function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; init_params=nothing, kwargs...)
+function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian;
+    bijector=NoTransform, init_params=nothing, kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = length(init_params)
-    l, g = target.nlogp_grad_nlogp(init_params)
+    l, g = -1 .* h.∂lπ∂θ(init_params)
     u = Random_unit_vector(rng, d)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
     state = MCHMCState(rng, 0, init_params, u, l, g, 0.0, Feps, Weps)
-    state = tune_hyperparameters(rng, sampler, target, state; kwargs...)
-    transition = Transition(state, target.inv_transform)
+    state = tune_hyperparameters(rng, sampler, h, state; kwargs...)
+    transition = Transition(state, bijector)
     return transition, state
 end
 
-function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MCHMCState; kwargs...)
+function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian, state::MCHMCState; 
+    bijector=NoTransform, kwargs...)
     """One step of the Langevin-like dynamics."""
     dialog = get(kwargs, :dialog, false)
 
@@ -141,7 +143,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
     adaptive = get(kwargs, :adaptive, sampler.settings.adaptive)
 
     # Hamiltonian step
-    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
+    xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, h, state)
     # Langevin-like noise
     uuu = Partially_refresh_momentum(rng, nu, uu)
     dEE = kinetic_change + ll - state.l
@@ -167,7 +169,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
     end
 
     state = MCHMCState(rng, state.i+1, xx, uuu, ll, gg, dEE, Feps, Weps)
-    transition = Transition(state, target.inv_transform)
+    transition = Transition(state, bijector)
     return transition, state
 end
 
@@ -219,15 +221,16 @@ function Sample(
     else
         init_params = target.prior_draw()
     end
-    transition, state = Step(rng, sampler, target;
-        init_params=init_params, kwargs...)
+    transition, state = Step(rng, sampler, target.h;
+        bijector=target.inv_transform, init_params=init_params, kwargs...)
     push!(chain, transition)
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         @showprogress "MCHMC: " (progress ? 1 : Inf) for i = 1:n-1
             try
-                transition, state = Step(rng, sampler, target, state; kwargs...)
+                transition, state = Step(rng, sampler, target.h, state;
+                    bijector=target.inv_transform, kwargs...)
                 push!(chain, transition)
                 println(io, transition)
             catch err
