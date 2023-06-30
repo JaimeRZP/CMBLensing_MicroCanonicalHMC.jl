@@ -130,6 +130,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; kwargs...
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
 
     state = MCHMCState(rng, 0, x, u, l, g, 0.0, Feps, Weps)
+    state = tune_hyperparameters(rng, sampler, target, state; kwargs...)
     transition = Transition(sampler, target, state)
     return transition, state
 end
@@ -222,11 +223,8 @@ function Sample(
         println(io, string(target.vsyms))
     end
 
-    _, state = Step(rng, sampler, target; kwargs...)
-    state = tune_hyperparameters(rng, sampler, target, state; progress, kwargs...)
-
     chain = []
-    transition = Transition(sampler, target, state)
+    transition, state = Step(rng, sampler, target; kwargs...)
     push!(chain, transition)
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
