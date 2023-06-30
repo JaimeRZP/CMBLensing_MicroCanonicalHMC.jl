@@ -14,7 +14,7 @@ function Leapfrog(
     g::AbstractVector,
 )
     """leapfrog"""
-    d = target.d
+    d = length(x)
     # go to the latent space
     z = x ./ sigma
 
@@ -53,7 +53,7 @@ function Minimal_norm(
     g::AbstractVector,
 )
     """Integrator from https://arxiv.org/pdf/hep-lat/0505020.pdf, see Equation 20."""
-    d = target.d
+    d = length(x)
     # go to the latent space
     z = x ./ sigma
 

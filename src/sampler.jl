@@ -80,9 +80,9 @@ end
 function Partially_refresh_momentum(
     rng::AbstractRNG,
     nu::Float64,
-    d::Int,
     u::AbstractVector,
 )
+    d = length(u)
     z = nu .* Random_unit_vector(rng, d; _normalize = false)
     uu = u .+ z
     return normalize(uu)
@@ -117,7 +117,7 @@ end
 function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; init_params=nothing, kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
-    d = target.d
+    d = length(init_params)
     l, g = target.nlogp_grad_nlogp(init_params)
     u = Random_unit_vector(rng, d)
     Weps = 1e-5
@@ -140,15 +140,14 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
     TEV = sampler.settings.TEV
     adaptive = get(kwargs, :adaptive, sampler.settings.adaptive)
 
-    d = target.d
-
     # Hamiltonian step
     xx, uu, ll, gg, kinetic_change = sampler.hamiltonian_dynamics(sampler, target, state)
     # Langevin-like noise
-    uuu = Partially_refresh_momentum(rng, nu, d, uu)
+    uuu = Partially_refresh_momentum(rng, nu, uu)
     dEE = kinetic_change + ll - state.l
 
     if adaptive
+        d = length(xx)
         varE = dEE^2 / d
         # 1e-8 is added to avoid divergences in log xi        
         xi = varE / TEV + 1e-8
@@ -174,9 +173,9 @@ end
 
 function Transition(sampler::MCHMCSampler, target::Target, state::MCHMCState)
     return [
-        target.inv_transform(state.x)[:]
-        sampler.hyperparameters.eps
-        state.dE
+        target.inv_transform(state.x)[:];
+        sampler.hyperparameters.eps;
+        state.dE;
         -state.l
     ]
 end
