@@ -3,8 +3,7 @@ struct Hamiltonian
     ∂lπ∂θ
 end 
 
-function Hamiltonian(model::AbstractMCMC.LogDensityModel)
-    logdensity = model.logdensity
+function Hamiltonian(logdensity)
     ℓπ(x) = -LogDensityProblems.logdensity(ℓ, x)
     ∂lπ∂θ(x) = -LogDensityProblems.logdensity_and_gradient(ℓ, x)
     return Hamiltonian(ℓπ, ∂lπ∂θ)

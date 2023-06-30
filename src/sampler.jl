@@ -160,7 +160,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
         new_eps = (Feps / Weps)^(-1 / 6)
 
         sampler.hyperparameters.eps = new_eps
-        tune_nu!(sampler, target)
+        tune_nu!(sampler, d)
     else
         Feps = state.Feps
         Weps = state.Weps

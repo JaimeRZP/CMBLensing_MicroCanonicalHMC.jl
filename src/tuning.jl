@@ -1,11 +1,11 @@
-function tune_what(sampler::MCHMCSampler, target::Target)
+function tune_what(sampler::MCHMCSampler, d::Int)
     tune_sigma, tune_eps, tune_L = false, false, false
 
     if sampler.hyperparameters.sigma == [0.0]
         @info "Tuning sigma ⏳"
         tune_sigma = true
         if sampler.settings.init_sigma == nothing
-            init_sigma = ones(target.d)
+            init_sigma = ones(d)
         else
             init_sigma = sampler.settings.init_sigma
         end
@@ -27,14 +27,14 @@ function tune_what(sampler::MCHMCSampler, target::Target)
         @info "Tuning L ⏳"
         tune_L = true
         if sampler.settings.init_sigma == nothing
-            init_L = sqrt(target.d)
+            init_L = sqrt(d)
         else
             init_L = sampler.settings.init_L
         end
         sampler.hyperparameters.L = init_L
     end
 
-    tune_nu!(sampler, target)
+    tune_nu!(sampler, d)
 
     return tune_sigma, tune_eps, tune_L
 end
@@ -65,10 +65,9 @@ function eval_nu(eps, L, d)
     return nu
 end
 
-function tune_nu!(sampler::MCHMCSampler, target::Target)
+function tune_nu!(sampler::MCHMCSampler, d::Int)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
-    d = target.d
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
@@ -85,7 +84,8 @@ function tune_hyperparameters(
     sett = sampler.settings
 
     # Tuning
-    tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
+    d = length(state.x)
+    tune_sigma, tune_eps, tune_L = tune_what(sampler, d)
     nadapt = sampler.settings.nadapt
 
     xs = state.x[:]
