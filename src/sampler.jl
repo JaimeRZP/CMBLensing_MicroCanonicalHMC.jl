@@ -103,6 +103,8 @@ function Update_momentum(d::Number, eff_eps::Number, g::AbstractVector, u::Abstr
 end
 
 struct MCHMCState{T}
+    rng::AbstractRNG
+    i::Int
     x::Vector{T}
     u::Vector{T}
     l::T
@@ -127,7 +129,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; kwargs...
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
 
-    state = MCHMCState(x, u, l, g, 0.0, Feps, Weps)
+    state = MCHMCState(rng, 0, x, u, l, g, 0.0, Feps, Weps)
     transition = Transition(sampler, target, state)
     return transition, state
 end
@@ -171,7 +173,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
         Weps = state.Weps
     end
 
-    state = MCHMCState(xx, uuu, ll, gg, dEE, Feps, Weps)
+    state = MCHMCState(rng, state.i+1, xx, uuu, ll, gg, dEE, Feps, Weps)
     transition = Transition(sampler, target, state)
     return transition, state
 end
