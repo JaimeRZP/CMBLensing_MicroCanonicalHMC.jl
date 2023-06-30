@@ -1,4 +1,4 @@
-function tune_what(sampler::Sampler, target::Target)
+function tune_what(sampler::MCHMCSampler, target::Target)
     tune_sigma, tune_eps, tune_L = false, false, false
 
     if sampler.hyperparameters.sigma == [0.0]
@@ -65,7 +65,7 @@ function eval_nu(eps, L, d)
     return nu
 end
 
-function tune_nu!(sampler::Sampler, target::Target)
+function tune_nu!(sampler::MCHMCSampler, target::Target)
     eps = sampler.hyperparameters.eps
     L = sampler.hyperparameters.L
     d = target.d
@@ -73,9 +73,9 @@ function tune_nu!(sampler::Sampler, target::Target)
 end
 
 function tune_hyperparameters(
-    sampler::Sampler,
+    sampler::MCHMCSampler,
     target::Target,
-    state::State;
+    state::MCHMCState;
     progress = true,
     kwargs...,
 )

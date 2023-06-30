@@ -43,7 +43,7 @@ Settings(; kwargs...) = begin
     Settings(nadapt, TEV, nchains, adaptive, integrator, init_eps, init_L, init_sigma)
 end
 
-struct Sampler <: AbstractMCMC.AbstractSampler
+struct MCHMCSampler <: AbstractMCMC.AbstractSampler
     settings::Settings
     hyperparameters::Hyperparameters
     hamiltonian_dynamics::Function
@@ -51,7 +51,7 @@ end
 
 function MCHMC(nadapt, TEV; kwargs...)
     """the MCHMC (q = 0 Hamiltonian) sampler"""
-    sett = Settings(; nadapt = nadapt, TEV = TEV, kwargs...)
+    sett = Settings(; nadapt=nadapt, TEV=TEV, kwargs...)
     hyperparameters = Hyperparameters(; kwargs...)
 
     ### integrator ###
@@ -65,7 +65,7 @@ function MCHMC(nadapt, TEV; kwargs...)
         println(string("integrator = ", integrator, "is not a valid option."))
     end
 
-    return Sampler(sett, hyperparameters, hamiltonian_dynamics)
+    return MCHMCSampler(sett, hyperparameters, hamiltonian_dynamics)
 end
 
 function Random_unit_vector(target::Target; _normalize = true)
@@ -82,7 +82,7 @@ function Random_unit_vector(rng::MersenneTwister, d::Int; _normalize = true)
     return u
 end
 
-function Partially_refresh_momentum(sampler::Sampler, target::Target, u::AbstractVector)
+function Partially_refresh_momentum(sampler::MCHMCSampler, target::Target, u::AbstractVector)
     """Adds a small noise to u and normalizes."""
     return Partially_refresh_momentum(target.rng, sampler.hyperparameters.nu, target.d, u)
 end
@@ -112,21 +112,7 @@ function Update_momentum(d::Number, eff_eps::Number, g::AbstractVector, u::Abstr
     return normalize(uu), delta_r
 end
 
-function Energy(
-    target::Target,
-    x::AbstractVector,
-    xx::AbstractVector,
-    E::Number,
-    kinetic_change::Number,
-)
-    l = target.nlogp(x)
-    ll = target.nlogp(xx)
-    dE = kinetic_change + ll - l
-    EE = E + dE
-    return -nllogp, EE
-end
-
-struct State{T}
+struct MCHMCState{T}
     x::Vector{T}
     u::Vector{T}
     l::T
@@ -136,7 +122,7 @@ struct State{T}
     Weps::T
 end
 
-function Step(sampler::Sampler, target::Target; kwargs...)
+function Step(sampler::MCHMCSampler, target::Target; kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = target.d
@@ -151,12 +137,12 @@ function Step(sampler::Sampler, target::Target; kwargs...)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
 
-    state = State(x, u, l, g, 0.0, Feps, Weps)
+    state = MCHMCState(x, u, l, g, 0.0, Feps, Weps)
     transition = Transition(sampler, target, state)
     return transition, state
 end
 
-function Step(sampler::Sampler, target::Target, state::State; kwargs...)
+function Step(sampler::MCHMCSampler, target::Target, state::MCHMCState; kwargs...)
     """One step of the Langevin-like dynamics."""
     dialog = get(kwargs, :dialog, false)
 
@@ -194,12 +180,12 @@ function Step(sampler::Sampler, target::Target, state::State; kwargs...)
         Weps = state.Weps
     end
 
-    state = State(xx, uuu, ll, gg, dEE, Feps, Weps)
+    state = MCHMCState(xx, uuu, ll, gg, dEE, Feps, Weps)
     transition = Transition(sampler, target, state)
     return transition, state
 end
 
-function Transition(sampler::Sampler, target::Target, state::State)
+function Transition(sampler::MCHMCSampler, target::Target, state::MCHMCState)
     return [
         target.inv_transform(state.x)[:]
         sampler.hyperparameters.eps
@@ -209,7 +195,7 @@ function Transition(sampler::Sampler, target::Target, state::State)
 end
 
 function Sample(
-    sampler::Sampler,
+    sampler::MCHMCSampler,
     target::Target,
     num_steps::Int;
     fol_name = ".",
