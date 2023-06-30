@@ -35,7 +35,7 @@ function tune_what(sampler::Sampler, target::Target)
     end
 
     tune_nu!(sampler, target)
-    
+
     return tune_sigma, tune_eps, tune_L
 end
 
@@ -61,35 +61,34 @@ function Neff(samples, l::Int)
 end
 
 function Virial_loss(x::AbstractVector, g::AbstractVector)
-"""loss^2 = (1/d) sum_i (virial_i - 1)^2"""
+    """loss^2 = (1/d) sum_i (virial_i - 1)^2"""
 
     #should be all close to 1 if we have reached the typical set
     v = mean(x .* g)  # mean over params
-    return sqrt.((v .- 1.0).^2)
+    return sqrt.((v .- 1.0) .^ 2)
 end
 
 function Step_burnin(sampler::Sampler, target::Target, init::State; kwargs...)
     dialog = get(kwargs, :dialog, false)
     step = Step(sampler, target, init)
-    lloss = Virial_loss(step.x, step.g)    
+    lloss = Virial_loss(step.x, step.g)
     return lloss, step
 end
 
-function Init_burnin(sampler::Sampler, target::Target,
-                     init::State; kwargs...)
+function Init_burnin(sampler::Sampler, target::Target, init::State; kwargs...)
     dialog = get(kwargs, :dialog, false)
     x = init.x
     g = init.g
-    v = mean(x .* g, dims=1)
-    loss = mean((1 .- v).^2)
+    v = mean(x .* g, dims = 1)
+    loss = mean((1 .- v) .^ 2)
 
     if dialog
         println("Initial Virial loss: ", loss)
     end
 
-    return  loss, init
-end    
-    
+    return loss, init
+end
+
 function eval_nu(eps, L, d)
     nu = sqrt((exp(2 * eps / L) - 1.0) / d)
     return nu
@@ -102,44 +101,50 @@ function tune_nu!(sampler::Sampler, target::Target)
     sampler.hyperparameters.nu = eval_nu(eps, L, d)
 end
 
-function tune_hyperparameters(sampler::Sampler, target::Target, state::State;
-                              progress=true, kwargs...)
+function tune_hyperparameters(
+    sampler::Sampler,
+    target::Target,
+    state::State;
+    progress = true,
+    kwargs...,
+)
     ### debugging tool ###
     dialog = get(kwargs, :dialog, false)
-    sett = sampler.settings  
-    
+    sett = sampler.settings
+
     # Tuning
     tune_sigma, tune_eps, tune_L = tune_what(sampler, target)
     nadapt = sampler.settings.nadapt
- 
-    xs = state.x[:]      
-    @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i in 2:nadapt
-        state = Step(sampler, target, state; adaptive=tune_eps, kwargs...)   
+
+    xs = state.x[:]
+    @showprogress "MCHMC (tuning): " (progress ? 1 : Inf) for i = 2:nadapt
+        state = Step(sampler, target, state; adaptive = tune_eps, kwargs...)
         xs = [xs state.x[:]]
-        if mod(i, Int(nadapt/5))==0
+        if mod(i, Int(nadapt / 5)) == 0
             if dialog
                 println(string("Burn in step: ", i))
-                println(string("eps --->" , sampler.hyperparameters.eps))
-            end            
-            sigma = vec(std(xs, dims=2)) 
+                println(string("eps --->", sampler.hyperparameters.eps))
+            end
+            sigma = vec(std(xs, dims = 2))
             if tune_sigma
                 sampler.hyperparameters.sigma = sigma
             end
             if tune_L
-                sampler.hyperparameters.L = sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
+                sampler.hyperparameters.L =
+                    sqrt(mean(sigma .^ 2)) * sampler.hyperparameters.eps
                 if dialog
-                    println(string("L   --->" , sampler.hyperparameters.L))
-                    println(" ")        
-                end    
+                    println(string("L   --->", sampler.hyperparameters.L))
+                    println(" ")
+                end
             end
         end
-    end               
-    
+    end
+
     @info string("eps: ", sampler.hyperparameters.eps)
-    @info string("L: ", sampler.hyperparameters.L) 
+    @info string("L: ", sampler.hyperparameters.L)
     @info string("nu: ", sampler.hyperparameters.nu)
     @info string("sigma: ", sampler.hyperparameters.sigma)
-    @info string("adaptive: ", sampler.settings.adaptive)         
-    
+    @info string("adaptive: ", sampler.settings.adaptive)
+
     return state
 end

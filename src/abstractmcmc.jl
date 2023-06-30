@@ -4,38 +4,42 @@ function AbstractMCMC.step(sampler::Sampler, target::Target, state; kwargs...)
     return Step(sampler::Sampler, target::Target, state; kwargs...)
 end
 
-function AbstractMCMC.sample(model::DynamicPPL.Model,
-                             sampler::Sampler, #AbstractMCMC.AbstractSampler,
-                             N::Int;
-                             progress=true,   
-                             resume_from=nothing,
-                             kwargs...)
+function AbstractMCMC.sample(
+    model::DynamicPPL.Model,
+    sampler::Sampler, #AbstractMCMC.AbstractSampler,
+    N::Int;
+    progress = true,
+    resume_from = nothing,
+    kwargs...,
+)
 
     if resume_from === nothing
         target = TuringTarget(model)
         init = Init(sampler, target; kwargs...)
-        init = tune_hyperparameters(sampler, target, init; progress=progress, kwargs...)
+        init = tune_hyperparameters(sampler, target, init; progress = progress, kwargs...)
     else
         @info "Starting from previous run"
         target = resume_from.info[:target]
         sampler = resume_from.info[:sampler]
         init = resume_from.info[:init]
     end
-    return AbstractMCMC.mcmcsample(target, sampler, init, N; progress=progress, kwargs...)
+    return AbstractMCMC.mcmcsample(target, sampler, init, N; progress = progress, kwargs...)
 
 end
 
-function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
-                                 sampler::Sampler, #AbstractMCMC.AbstractSampler,
-                                 init,
-                                 N::Integer;
-                                 save_state=true,
-                                 burn_in = 0,
-                                 progress=PROGRESS[],
-                                 progressname="Chain 1",
-                                 callback=nothing,
-                                 thinning=1,
-                                 kwargs...)
+function AbstractMCMC.mcmcsample(
+    target::AbstractMCMC.AbstractModel,
+    sampler::Sampler, #AbstractMCMC.AbstractSampler,
+    init,
+    N::Integer;
+    save_state = true,
+    burn_in = 0,
+    progress = PROGRESS[],
+    progressname = "Chain 1",
+    callback = nothing,
+    thinning = 1,
+    kwargs...,
+)
 
     # Check the number of requested samples.
     N > 0 || error("the number of samples must be ≥ 1")
@@ -48,7 +52,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     state = init
     smpl = _make_sample(sampler, target, state)
 
-    @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
+    AbstractMCMC.@ifwithprogresslogger progress name = progressname begin
         # Determine threshold values for progress logging
         # (one update per 0.5% of progress)
         if progress
@@ -57,7 +61,7 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
         end
 
         # Discard burn in.
-        for i in 1:burn_in
+        for i = 1:burn_in
             # Update the progress bar.
             if progress && i >= next_update
                 AbstractMCMC.ProgressLogging.@logprogress i / Ntotal
@@ -84,9 +88,9 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
         end
 
         # Step through the sampler.
-        for i in 2:N
+        for i = 2:N
             # Discard thinned samples.
-            for _ in 1:(thinning - 1)
+            for _ = 1:(thinning-1)
                 # Obtain the next sample and state.
                 state = AbstractMCMC.step(sampler, target, state; kwargs...)
                 smpl = _make_sample(sampler, target, state)
@@ -103,7 +107,8 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
             smpl = _make_sample(sampler, target, state)
 
             # Run callback.
-            callback === nothing || callback(rng, target, sampler, sample, state, i; kwargs...)
+            callback === nothing ||
+                callback(rng, target, sampler, sample, state, i; kwargs...)
 
             # Save the sample.
             samples = AbstractMCMC.save!!(samples, smpl, 1, target, sampler, N; kwargs...)
@@ -120,17 +125,18 @@ function AbstractMCMC.mcmcsample(target::AbstractMCMC.AbstractModel,
     stop = time()
     duration = stop - start
     stats = AbstractMCMC.SamplingStats(start, stop, duration)
-    
+
     return AbstractMCMC.bundle_samples(
-    samples,
-    target,
-    sampler,
-    state;
-    save_state=save_state,
-    stats=stats,
-    burn_in=burn_in,
-    thinning=thinning,
-    kwargs...)
+        samples,
+        target,
+        sampler,
+        state;
+        save_state = save_state,
+        stats = stats,
+        burn_in = burn_in,
+        thinning = thinning,
+        kwargs...,
+    )
 end
 
 function AbstractMCMC.bundle_samples(
@@ -142,7 +148,8 @@ function AbstractMCMC.bundle_samples(
     stats = missing,
     burn_in = 0,
     thinning = 1,
-    kwargs...)
+    kwargs...,
+)
 
     param_names = target.vsyms
     internal_names = [:eps, :E, :logp]
@@ -150,15 +157,14 @@ function AbstractMCMC.bundle_samples(
 
     # Set up the info tuple.
     if save_state
-        info = (target=target, sampler=sampler,
-                init=state)
+        info = (target = target, sampler = sampler, init = state)
     else
         info = NamedTuple()
     end
 
     # Merge in the timing info, if available
     if !ismissing(stats)
-        info = merge(info, (start_time=stats.start, stop_time=stats.stop))
+        info = merge(info, (start_time = stats.start, stop_time = stats.stop))
     end
 
     # Conretize the array before giving it to MCMCChains.
@@ -169,9 +175,10 @@ function AbstractMCMC.bundle_samples(
         samples,
         names,
         (internals = internal_names,);
-        info=info,
-        start=burn_in + 1,
-        thin=thinning)
+        info = info,
+        start = burn_in + 1,
+        thin = thinning,
+    )
 
     return chain
 end
@@ -181,32 +188,40 @@ end
 
 chainsstack(c::AbstractVector{MCMCChains.Chains}) = reduce(chainscat, c)
 
-function AbstractMCMC.sample(model::DynamicPPL.Model,
-                             sampler::AbstractMCMC.AbstractSampler,
-                             ::MCMCThreads,
-                             N::Integer,
-                             nchains::Integer;
-                             progress=PROGRESS[],
-                             progressname="Sampling",
-                             resume_from=nothing,
-                             kwargs...)
+function AbstractMCMC.sample(
+    model::DynamicPPL.Model,
+    sampler::AbstractMCMC.AbstractSampler,
+    ::MCMCThreads,
+    N::Integer,
+    nchains::Integer;
+    progress = PROGRESS[],
+    progressname = "Sampling",
+    resume_from = nothing,
+    kwargs...,
+)
 
     if resume_from === nothing
         target = TuringTarget(model)
         init = Init(sampler, target; kwargs...)
 
         if nchains < Threads.nthreads()
-            @info string("number of chains: ",
-                         nchains,
-                         " smaller than number of threads: ",
-                         Threads.nthreads(),  ".",
-                         " Increase the number of chains to make full use of your threads.")
+            @info string(
+                "number of chains: ",
+                nchains,
+                " smaller than number of threads: ",
+                Threads.nthreads(),
+                ".",
+                " Increase the number of chains to make full use of your threads.",
+            )
         end
         if nchains > Threads.nthreads()
-            @info string("number of chains: ",
-                         nchains,
-                         " requesteed larger than number of threads: ",
-                         Threads.nthreads(),  ".")
+            @info string(
+                "number of chains: ",
+                nchains,
+                " requesteed larger than number of threads: ",
+                Threads.nthreads(),
+                ".",
+            )
         end
 
         interval = 1:nchains
@@ -219,7 +234,13 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
             _sampler = samplers[i]
             _target = targets[i]
             _init = inits[i]
-            _init = tune_hyperparameters(_sampler, _target, _init; progress=progress, kwargs...)
+            _init = tune_hyperparameters(
+                _sampler,
+                _target,
+                _init;
+                progress = progress,
+                kwargs...,
+            )
         end
 
     else
@@ -232,7 +253,7 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
         inits = [chain.info[:init] for chain in resume_from]
     end
 
-    @AbstractMCMC.ifwithprogresslogger progress name = progressname begin
+    AbstractMCMC.@ifwithprogresslogger progress name = progressname begin
         # Create a channel for progress logging.
         if progress
             channel = Channel{Bool}(length(interval))
@@ -247,9 +268,10 @@ function AbstractMCMC.sample(model::DynamicPPL.Model,
                 _sampler,
                 _init,
                 N;
-                progress=PROGRESS[],
-                progressname=string("chain ", i),
-                kwargs...)
+                progress = PROGRESS[],
+                progressname = string("chain ", i),
+                kwargs...,
+            )
 
             # Update the progress bar.
             progress && put!(channel, true)
