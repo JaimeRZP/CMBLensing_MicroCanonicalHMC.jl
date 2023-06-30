@@ -1,3 +1,5 @@
+NoTransform(x) = x
+
 mutable struct TuringTarget <: Target
     model::DynamicPPL.Model
     d::Int
@@ -114,23 +116,13 @@ CustomTarget(nlogp, grad_nlogp, priors; kwargs...) = begin
     d = length(priors)
     vsyms = [DynamicPPL.VarName(Symbol("d_", i)) for i = 1:d]
 
-    function transform(x)
-        xt = x
-        return xt
-    end
-
-    function inv_transform(xt)
-        x = xt
-        return x
-    end
-
     function prior_draw()
         x = [rand(dist) for dist in priors]
         xt = transform(x)
         return xt
     end
 
-    CustomTarget(d, nlogp, grad_nlogp, transform, inv_transform, prior_draw)
+    CustomTarget(d, nlogp, grad_nlogp, NoTransform, NoTransform, prior_draw)
 end
 
 mutable struct GaussianTarget <: Target
@@ -152,25 +144,8 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix) = begin
     ℓπ(θ::AbstractVector) = logpdf(_gaussian, θ)
     ∂lπ∂θ(θ::AbstractVector) = gradlogpdf(_gaussian, θ)
 
-    function transform(x)
-        xt = x
-        return xt
-    end
-
-    function inv_transform(xt)
-        x = xt
-        return x
-    end
-
-    function nlogp(x)
-        xt = transform(x)
-        return -ℓπ(xt)
-    end
-
-    function grad_nlogp(x)
-        xt = transform(x)
-        return -∂lπ∂θ(xt)
-    end
+    nlogp(x) = -ℓπ(x)
+    grad_nlogp(x) = -∂lπ∂θ(x)
 
     function nlogp_grad_nlogp(x)
         l = nlogp(x)
@@ -189,8 +164,8 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix) = begin
         nlogp,
         grad_nlogp,
         nlogp_grad_nlogp,
-        transform,
-        inv_transform,
+        NoTransform,
+        NoTransform,
         prior_draw,
     )
 end
@@ -216,21 +191,10 @@ RosenbrockTarget(a, b; kwargs...) = begin
         return -0.5 * sum(m)
     end
 
-    function transform(x)
-        xt = x
-        return xt
-    end
-
-    function inv_transform(xt)
-        x = xt
-        return x
-    end
-
     function nlogp(x)
-        xt = transform(x)
-        xt_1 = xt[1:Int(d / 2)]
-        xt_2 = xt[Int(d / 2)+1:end]
-        return -ℓπ(xt_1, xt_2)
+        x_1 = x[1:Int(d / 2)]
+        x_2 = x[Int(d / 2)+1:end]
+        return -ℓπ(x_1, x_2)
     end
 
     function grad_nlogp(x)
@@ -244,8 +208,8 @@ RosenbrockTarget(a, b; kwargs...) = begin
     end
 
     function prior_draw()
-        xt = rand(MvNormal(zeros(d), ones(d)))
-        return xt
+        x = rand(MvNormal(zeros(d), ones(d)))
+        return x
     end
 
     RosenbrockTarget(
@@ -254,8 +218,8 @@ RosenbrockTarget(a, b; kwargs...) = begin
         nlogp,
         grad_nlogp,
         nlogp_grad_nlogp,
-        transform,
-        inv_transform,
+        NoTransform,
+        NoTransform,
         prior_draw,
     )
 end

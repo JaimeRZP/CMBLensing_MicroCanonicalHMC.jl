@@ -124,7 +124,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; init_para
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
     state = MCHMCState(rng, 0, init_params, u, l, g, 0.0, Feps, Weps)
     state = tune_hyperparameters(rng, sampler, target, state; kwargs...)
-    transition = Transition(sampler, target, state)
+    transition = Transition(state, target.inv_transform)
     return transition, state
 end
 
@@ -167,17 +167,14 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target, state::MC
     end
 
     state = MCHMCState(rng, state.i+1, xx, uuu, ll, gg, dEE, Feps, Weps)
-    transition = Transition(sampler, target, state)
+    transition = Transition(state, target.inv_transform)
     return transition, state
 end
 
-function Transition(sampler::MCHMCSampler, target::Target, state::MCHMCState)
-    return [
-        target.inv_transform(state.x)[:];
-        sampler.hyperparameters.eps;
-        state.dE;
-        -state.l
-    ]
+function Transition(state::MCHMCState, bijector)
+    eps = (state.Feps / state.Weps)^(-1 / 6)
+    sample = bijector(state.x)[:]
+    return [sample; eps; state.dE; -state.l]
 end
 
 function Sample(
@@ -218,11 +215,12 @@ function Sample(
     chain = []
     ### initial conditions ###
     if :init_params ∈ keys(kwargs)
-        init_params = target.transform(kwargs[:init_params])
+        init_params = target.inv_transform(kwargs[:init_params])
     else
         init_params = target.prior_draw()
     end
-    transition, state = Step(rng, sampler, target; init_params=init_params, kwargs...)
+    transition, state = Step(rng, sampler, target;
+        init_params=init_params, kwargs...)
     push!(chain, transition)
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io

@@ -12,8 +12,9 @@ using BlockDiagonals, Distributions, DistributionsAD, ProgressMeter
 
 abstract type Target <: AbstractMCMC.AbstractModel end
 
-include("sampler.jl")
+include("hamiltonian.jl")
 include("targets.jl")
+include("sampler.jl")
 include("integrators.jl")
 include("tuning.jl")
 include("abstractmcmc.jl")
