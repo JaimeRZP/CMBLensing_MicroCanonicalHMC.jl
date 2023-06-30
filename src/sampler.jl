@@ -114,22 +114,15 @@ struct MCHMCState{T}
     Weps::T
 end
 
-function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; kwargs...)
+function Step(rng::AbstractRNG, sampler::MCHMCSampler, target::Target; init_params=nothing, kwargs...)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = target.d
-    ### initial conditions ###
-    if :init_x ∈ keys(kwargs)
-        x = target.transform(kwargs[:init_x])
-    else
-        x = target.prior_draw()
-    end
-    l, g = target.nlogp_grad_nlogp(x)
+    l, g = target.nlogp_grad_nlogp(init_params)
     u = Random_unit_vector(rng, d)
     Weps = 1e-5
     Feps = Weps * sampler.hyperparameters.eps^(1 / 6)
-
-    state = MCHMCState(rng, 0, x, u, l, g, 0.0, Feps, Weps)
+    state = MCHMCState(rng, 0, init_params, u, l, g, 0.0, Feps, Weps)
     state = tune_hyperparameters(rng, sampler, target, state; kwargs...)
     transition = Transition(sampler, target, state)
     return transition, state
@@ -224,7 +217,13 @@ function Sample(
     end
 
     chain = []
-    transition, state = Step(rng, sampler, target; kwargs...)
+    ### initial conditions ###
+    if :init_params ∈ keys(kwargs)
+        init_params = target.transform(kwargs[:init_params])
+    else
+        init_params = target.prior_draw()
+    end
+    transition, state = Step(rng, sampler, target; init_params=init_params, kwargs...)
     push!(chain, transition)
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
