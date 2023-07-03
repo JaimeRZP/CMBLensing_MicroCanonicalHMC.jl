@@ -185,7 +185,7 @@ function Sample(
     n::Int;
     fol_name = ".",
     file_name = "samples",
-    progress = true,
+    progress = false,
     kwargs...,
 )
     return Sample(Random.GLOBAL_RNG, sampler, target, n; kwargs...)
@@ -198,7 +198,7 @@ function Sample(
     n::Int;
     fol_name = ".",
     file_name = "samples",
-    progress = true,
+    progress = false,
     kwargs...,
 )
     """Args:
