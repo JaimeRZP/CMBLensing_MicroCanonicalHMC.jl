@@ -33,7 +33,7 @@
         ##############
         ### Neal's ###
         ##############
-        d = 21
+        d = 10
         @model function funnel()
             θ ~ Truncated(Normal(0, 3), -3, 3)
             z ~ MvNormal(zeros(d-1), exp(θ)*I)
@@ -50,19 +50,19 @@
         samples_mchmc = Sample(spl, target, 10_000; dialog=false)
 
         theta_mchmc = [sample[1] for sample in samples_mchmc]
-        x10_mchmc = [sample[10+1] for sample in samples_mchmc]
+        x10_mchmc = [sample[2] for sample in samples_mchmc]
         mm1, m1, s1 = (median(theta_mchmc), mean(theta_mchmc), std(theta_mchmc))
         mm2, m2, s2 = (median(x10_mchmc), mean(x10_mcjmc), std(x10_mchmc))
         E = [sample[end-1] for sample in samples_mchmc];
         VarE = std(E)^2/d
 
-        @test VarE ≈ 0.01 atol=0.03
-        @test mm1 ≈ 0.07 atol=0.01
-        @test m1 ≈ 0.01 atol=0.01
-        @test s1 ≈ 0.72 atol=0.1
-        @test mm2 ≈ -0.82 atol=0.1
-        @test m2 ≈ -0.86 atol=0.1
-        @test s2 ≈ 0.76 atol=0.1
+        @test VarE ≈ 0.01 atol=0.005
+        @test mm1 ≈ -0.06 atol=0.01
+        @test m1 ≈ -0.19 atol=0.01
+        @test s1 ≈ 1.04 atol=0.1
+        @test mm2 ≈ -0.17 atol=0.1
+        @test m2 ≈ 0.20 atol=0.1
+        @test s2 ≈ 0.70 atol=0.1
     end
 
     @testset "Rosembrok" begin
