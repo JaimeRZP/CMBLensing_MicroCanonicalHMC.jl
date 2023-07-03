@@ -1,4 +1,32 @@
 @testset "Sample" begin
+    ################
+    ### Gaussian ###
+    ################
+    d = 20
+    k = 100
+    m = Vector(LinRange(1, 100, d))
+    e = 10 .^ LinRange(log10(1/sqrt(k)), log10(sqrt(k)), d)
+    cov_matt = Diagonal(e);
+    target = GaussianTarget(m, cov_matt)
+
+    spl = MCHMC(10_000, 0.01; init_eps=sqrt(d))
+    samples_mchmc = Sample(spl, target, 100_000; dialog=true);
+    samples_mchmc_adaptive = Sample(spl, target, 100_000;
+        adaptive=true dialog=true);
+
+     _samples_mchmc = mapreduce(permutedims, vcat, samples_mchmc)
+    s1 = std(_samples_mchmc, dims=1)[1:end-3]
+    m1 = mean(_samples_mchmc, dims=1)[1:end-3]
+
+    _samples_mchmc_adaptive = mapreduce(permutedims, vcat, samples_mchmc_adaptive)
+    s2 = std(_samples_mchmc_adaptive, dims=1)[1:end-3]
+    m2 = mean(_samples_mchmc_adaptive, dims=1)[1:end-3]
+
+    @test (m1 .- m)./sqrt.(e) ≈ 0.0 atol=0.2
+    @test s1 ./sqrt.(e) .-1 ≈ 0.0 atol=0.2
+    @test (m2 .- m)./sqrt.(e) ≈ 0.0 atol=0.2
+    @test s2./sqrt.(e) .-1 ≈ 0.0 atol=0.2
+
     ##############
     ### Neal's ###
     ##############
@@ -15,11 +43,13 @@
 
     target = TuringTarget(funnel_model; d=d, compute_MAP=false)
 
-    spl = MCHMC(10_000, 0.01)
-    samples_mchmc = Sample(spl, target, 100_000; dialog=false)
+    spl = MCHMC(1_000, 0.01)
+    samples_mchmc = Sample(spl, target, 10_000; dialog=false)
 
     theta_mchmc = [sample[1] for sample in samples_mchmc]
     x10_mchmc = [sample[10+1] for sample in samples_mchmc]
+    mm1, m1, s1 = (median(theta_mchmc), mean(theta_mcjmc), std(theta_mchmc))
+    mm2, m2, s2 = (median(x10_mchmc), mean(x10_mcjmc), std(x10_mchmc))
     E = [sample[end-1] for sample in samples_mchmc];
     VarE = std(E)^2/d
 
