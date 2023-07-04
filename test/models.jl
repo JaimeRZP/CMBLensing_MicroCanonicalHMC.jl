@@ -30,9 +30,9 @@
     end
 
     @testset "Neals" begin
-        ##############
-        ### Neal's ###
-        ##############
+        #####################
+        ### Neal's funnel ###
+        #####################
         d = 10
         @model function funnel()
             θ ~ Truncated(Normal(0, 3), -3, 3)
