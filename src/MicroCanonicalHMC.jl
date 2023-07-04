@@ -7,13 +7,14 @@ export ParallelTarget
 
 using LinearAlgebra, Statistics, Random, DataFrames
 using DynamicPPL, Turing, LogDensityProblemsAD, LogDensityProblems, ForwardDiff
-using AbstractMCMC, MCMCChains,  MCMCDiagnosticTools, Distributed
+using AbstractMCMC, MCMCChains, MCMCDiagnosticTools, Distributed
 using BlockDiagonals, Distributions, DistributionsAD, ProgressMeter
 
 abstract type Target <: AbstractMCMC.AbstractModel end
 
-include("sampler.jl")
+include("hamiltonian.jl")
 include("targets.jl")
+include("sampler.jl")
 include("integrators.jl")
 include("tuning.jl")
 include("abstractmcmc.jl")
