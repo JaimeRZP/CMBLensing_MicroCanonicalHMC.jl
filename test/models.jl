@@ -52,7 +52,7 @@
         theta_mchmc = [sample[1] for sample in samples_mchmc]
         x10_mchmc = [sample[2] for sample in samples_mchmc]
         mm1, m1, s1 = (median(theta_mchmc), mean(theta_mchmc), std(theta_mchmc))
-        mm2, m2, s2 = (median(x10_mchmc), mean(x10_mcjmc), std(x10_mchmc))
+        mm2, m2, s2 = (median(x10_mchmc), mean(x10_mchmc), std(x10_mchmc))
         E = [sample[end-1] for sample in samples_mchmc];
         VarE = std(E)^2/d
 
