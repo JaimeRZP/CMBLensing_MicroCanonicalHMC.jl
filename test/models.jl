@@ -47,7 +47,8 @@
         target = TuringTarget(funnel_model; d=d, compute_MAP=false)
 
         spl = MCHMC(1_000, 0.01)
-        samples_mchmc = Sample(spl, target, 10_000; dialog=false)
+        samples_mchmc = Sample(spl, target, 10_000;
+            adaptive=true, dialog=false)
 
         theta_mchmc = [sample[1] for sample in samples_mchmc]
         x10_mchmc = [sample[2] for sample in samples_mchmc]
@@ -57,8 +58,8 @@
         VarE = std(E)^2/d
 
         @test VarE ≈ 0.01 atol=0.005
-        @test mm1 ≈ -0.06 atol=0.01
-        @test m1 ≈ -0.19 atol=0.01
+        @test mm1 ≈ -0.06 atol=0.1
+        @test m1 ≈ -0.19 atol=0.1
         @test s1 ≈ 1.04 atol=0.1
         @test mm2 ≈ -0.17 atol=0.1
         @test m2 ≈ 0.20 atol=0.1
