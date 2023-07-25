@@ -114,6 +114,19 @@ struct MCHMCState{T}
     Weps::T
 end
 
+struct Transition{T}
+    θ::Vector{T}
+    ϵ::T
+    δE::T
+    ℓ::T
+end
+
+function Transition(state::MCHMCState, bijector)
+    eps = (state.Feps / state.Weps)^(-1 / 6)
+    sample = bijector(state.x)[:]
+    return Transition(sample, eps, state.dE, -state.l)
+end
+
 function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian;
     bijector=NoTransform, init_params=nothing, kwargs...)
     sett = sampler.settings
@@ -173,12 +186,6 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian, state::MC
     return transition, state
 end
 
-function Transition(state::MCHMCState, bijector)
-    eps = (state.Feps / state.Weps)^(-1 / 6)
-    sample = bijector(state.x)[:]
-    return [sample; eps; state.dE; -state.l]
-end
-
 function Sample(
     sampler::MCHMCSampler,
     target::Target,
@@ -223,7 +230,7 @@ function Sample(
     end
     transition, state = Step(rng, sampler, target.h;
         bijector=target.inv_transform, init_params=init_params, kwargs...)
-    push!(chain, transition)
+    push!(chain, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
@@ -231,8 +238,8 @@ function Sample(
             try
                 transition, state = Step(rng, sampler, target.h, state;
                     bijector=target.inv_transform, kwargs...)
-                push!(chain, transition)
-                println(io, transition)
+                push!(chain, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
+                println(io, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
             catch err
                 if err isa InterruptException
                     rethrow(err)
