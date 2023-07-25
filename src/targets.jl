@@ -74,16 +74,7 @@ TuringTarget(model; kwargs...) = begin
         return vi_t[DynamicPPL.SampleFromPrior()]
     end
 
-    TuringTarget(
-        model,
-        d,
-        vsyms,
-        dists,
-        hamiltonian,
-        transform,
-        inv_transform,
-        prior_draw,
-    )
+    TuringTarget(model, d, vsyms, dists, hamiltonian, transform, inv_transform, prior_draw)
 end
 
 
@@ -132,14 +123,7 @@ GaussianTarget(_mean::AbstractVector, _cov::AbstractMatrix) = begin
         return xt
     end
 
-    GaussianTarget(
-        d,
-        vsyms,
-        hamiltonian,
-        NoTransform,
-        NoTransform,
-        prior_draw,
-    )
+    GaussianTarget(d, vsyms, hamiltonian, NoTransform, NoTransform, prior_draw)
 end
 
 mutable struct RosenbrockTarget <: Target
@@ -156,7 +140,7 @@ RosenbrockTarget(a, b; kwargs...) = begin
     d = kwargs[:d]
     vsyms = [DynamicPPL.VarName(Symbol("d_", i)) for i = 1:d]
 
-    function ℓπ(x; a=a, b=b)
+    function ℓπ(x; a = a, b = b)
         x1 = x[1:Int(d / 2)]
         x2 = x[Int(d / 2)+1:end]
         m = @.((a - x1)^2 + b * (x2 - x1^2)^2)
@@ -174,12 +158,5 @@ RosenbrockTarget(a, b; kwargs...) = begin
         return x
     end
 
-    RosenbrockTarget(
-        d,
-        vsyms,
-        hamiltonian,
-        NoTransform,
-        NoTransform,
-        prior_draw,
-    )
+    RosenbrockTarget(d, vsyms, hamiltonian, NoTransform, NoTransform, prior_draw)
 end

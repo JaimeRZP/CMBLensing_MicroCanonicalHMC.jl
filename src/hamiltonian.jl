@@ -1,7 +1,7 @@
 struct Hamiltonian
-    ℓπ
-    ∂lπ∂θ
-end 
+    ℓπ::Any
+    ∂lπ∂θ::Any
+end
 
 function Hamiltonian(logdensity)
     ℓπ(x) = LogDensityProblems.logdensity(ℓ, x)

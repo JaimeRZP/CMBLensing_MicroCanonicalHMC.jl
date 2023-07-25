@@ -51,7 +51,7 @@ end
 
 function MCHMC(nadapt, TEV; kwargs...)
     """the MCHMC (q = 0 Hamiltonian) sampler"""
-    sett = Settings(; nadapt=nadapt, TEV=TEV, kwargs...)
+    sett = Settings(; nadapt = nadapt, TEV = TEV, kwargs...)
     hyperparameters = Hyperparameters(; kwargs...)
 
     ### integrator ###
@@ -77,11 +77,7 @@ function Random_unit_vector(rng::AbstractRNG, d::Int; _normalize = true)
     return u
 end
 
-function Partially_refresh_momentum(
-    rng::AbstractRNG,
-    nu::Float64,
-    u::AbstractVector,
-)
+function Partially_refresh_momentum(rng::AbstractRNG, nu::Float64, u::AbstractVector)
     d = length(u)
     z = nu .* Random_unit_vector(rng, d; _normalize = false)
     uu = u .+ z
@@ -127,8 +123,14 @@ function Transition(state::MCHMCState, bijector)
     return Transition(sample, eps, state.dE, -state.l)
 end
 
-function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian;
-    bijector=NoTransform, init_params=nothing, kwargs...)
+function Step(
+    rng::AbstractRNG,
+    sampler::MCHMCSampler,
+    h::Hamiltonian;
+    bijector = NoTransform,
+    init_params = nothing,
+    kwargs...,
+)
     sett = sampler.settings
     kwargs = Dict(kwargs)
     d = length(init_params)
@@ -142,8 +144,14 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian;
     return transition, state
 end
 
-function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian, state::MCHMCState; 
-    bijector=NoTransform, kwargs...)
+function Step(
+    rng::AbstractRNG,
+    sampler::MCHMCSampler,
+    h::Hamiltonian,
+    state::MCHMCState;
+    bijector = NoTransform,
+    kwargs...,
+)
     """One step of the Langevin-like dynamics."""
     dialog = get(kwargs, :dialog, false)
 
@@ -181,7 +189,7 @@ function Step(rng::AbstractRNG, sampler::MCHMCSampler, h::Hamiltonian, state::MC
         Weps = state.Weps
     end
 
-    state = MCHMCState(rng, state.i+1, xx, uuu, ll, gg, dEE, Feps, Weps)
+    state = MCHMCState(rng, state.i + 1, xx, uuu, ll, gg, dEE, Feps, Weps)
     transition = Transition(state, bijector)
     return transition, state
 end
@@ -228,16 +236,28 @@ function Sample(
     else
         init_params = target.prior_draw()
     end
-    transition, state = Step(rng, sampler, target.h;
-        bijector=target.inv_transform, init_params=init_params, kwargs...)
+    transition, state = Step(
+        rng,
+        sampler,
+        target.h;
+        bijector = target.inv_transform,
+        init_params = init_params,
+        kwargs...,
+    )
     push!(chain, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
 
     io = open(joinpath(fol_name, string(file_name, ".txt")), "w") do io
         println(io, sample)
         @showprogress "MCHMC: " (progress ? 1 : Inf) for i = 1:n-1
             try
-                transition, state = Step(rng, sampler, target.h, state;
-                    bijector=target.inv_transform, kwargs...)
+                transition, state = Step(
+                    rng,
+                    sampler,
+                    target.h,
+                    state;
+                    bijector = target.inv_transform,
+                    kwargs...,
+                )
                 push!(chain, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
                 println(io, [transition.θ; transition.ϵ; transition.δE; transition.ℓ])
             catch err
