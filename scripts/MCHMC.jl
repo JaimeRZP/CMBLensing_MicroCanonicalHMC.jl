@@ -11,7 +11,8 @@ Nside = 512
 T = Float64;
 masking = true
 global_parameters = true
-precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing
+t = 0.15 #nothing
+precond_path = string("../chains/pixel_preconditioners/pp_nside_512_t_", t)
 file_path = 
 println("Nside: ", Nside)
 println("Masking: ", masking)
@@ -28,11 +29,9 @@ println("Built problem")
 prob.Λmass.diag.θ.r *= 5.85
 prob.Λmass.diag.θ.Aϕ *= 112.09
 
-if precond_path === nothing
-    use_precond = false
+if t == nothing
     precond = one(simulate(Diagonal(one(LenseBasis(diag(prob.Λmass))))));
 else
-    use_precond = true
     precond = load(precond_path, "dist_mat_precond")
     precond = adapt(CuArray, precond)
     precond = from_vec(precond);
@@ -44,11 +43,34 @@ target = CMBLensingTarget(prob);
 #Sampler
 TEV = 0.0001
 spl = MCHMC(500, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
-file_name=string("/pscratch/sd/j/jaimerz/chains/MCHMC/CMBLensing",
+fol_name=string("/pscratch/sd/j/jaimerz/chains/MCHMC/CMBLensing",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
-    "_precond_", use_precond,
+    "_precond_", t,
     "_TEV_", TEV)
+
+if isdir(fol_name)
+    fol_files = readdir(fol_name)
+    println("Found existing file ", fol_name)
+    if length(fol_files) != 0
+        last_chain = last([file for file in fol_files if occursin("chain", file)])
+        last_n = parse(Int, last_chain[end])
+        last_chain = load(string(fol_name, "/", last_chain), "samples")
+        init_params = last_chain[:, end]
+        println("Restarting chain")
+    else
+        println("Starting new chain")
+        last_n = 0
+        init_params = prob.Ωstart
+    end
+else
+    mkdir(fol_name)
+    println(string("Created new folder ", fol_name))
+    last_n = 0
+end
+
+file_name = string(fol_name, "/chain_", last_n+1)
+
 samples_mchmc = Sample(spl, target, 10_000, dialog=false, progress=true,
                        thinning=20, file_name=file_name);
