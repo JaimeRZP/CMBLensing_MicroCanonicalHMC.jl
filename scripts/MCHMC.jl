@@ -42,8 +42,8 @@ target = CMBLensingTarget(prob);
 
 #Sampler
 TEV = 0.0001
-spl = MCHMC(500, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
-fol_name=string("/pscratch/sd/j/jaimerz/chains/MCHMC/CMBLensing",
+spl = MCHMC(1, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
+fol_name=string("/mnt/extraspace/jaimerz/mchmc_chains/MCHMC/CMBLensing",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
@@ -72,5 +72,5 @@ end
 
 file_name = string(fol_name, "/chain_", last_n+1)
 
-samples_mchmc = Sample(spl, target, 10_000, dialog=false, progress=true,
+samples_mchmc = Sample(spl, target, 1, dialog=false, progress=true,
                        thinning=20, file_name=file_name);
