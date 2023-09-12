@@ -12,7 +12,6 @@ T = Float64;
 masking = true
 global_parameters = true
 precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing
-file_path = 
 println("Nside: ", Nside)
 println("Masking: ", masking)
 println("Global_parameters: ", global_parameters)
