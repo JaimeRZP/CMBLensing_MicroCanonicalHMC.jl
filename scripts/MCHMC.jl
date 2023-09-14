@@ -13,7 +13,6 @@ masking = true
 global_parameters = true
 t = 0.15 #nothing
 precond_path = string("../chains/pixel_preconditioners/pp_nside_512_t_", t)
-file_path = 
 println("Nside: ", Nside)
 println("Masking: ", masking)
 println("Global_parameters: ", global_parameters)
@@ -42,7 +41,7 @@ target = CMBLensingTarget(prob);
 
 #Sampler
 TEV = 0.0001
-spl = MCHMC(500, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
+spl = MCHMC(100, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
 fol_name=string("/pscratch/sd/j/jaimerz/chains/MCHMC/CMBLensing",
     "_cosmo_", global_parameters,
     "_masking_", masking,
@@ -72,5 +71,5 @@ end
 
 file_name = string(fol_name, "/chain_", last_n+1)
 
-samples_mchmc = Sample(spl, target, 10_000, dialog=false, progress=true,
+samples_mchmc = Sample(spl, target, 100, dialog=false, progress=true,
                        thinning=20, file_name=file_name);
