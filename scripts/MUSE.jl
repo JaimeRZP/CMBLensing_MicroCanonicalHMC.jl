@@ -11,8 +11,7 @@ Nside = 512
 T = Float64;
 masking = true
 global_parameters = true
-precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing
-file_path = 
+precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing 
 println("Nside: ", Nside)
 println("Masking: ", masking)
 println("Global_parameters: ", global_parameters)
@@ -50,7 +49,7 @@ CMBLensingMuseInferenceExt.mergeθ(prob::CMBLensingMuseInferenceExt.CMBLensingMu
 
 z₀ = zero(MuseInference.sample_x_z(muse_prob, Xoshiro(0), prob.Ωstart.θ).z);
 result = MuseResult()
-nsims = 200
+nsims = 5
 rng = Xoshiro(0)
 
 prob.ncalls[] = 0
@@ -59,11 +58,11 @@ MuseInference.get_J!(result, muse_prob; nsims,   rng, z₀, progress=true)
 MuseInference.get_H!(result, muse_prob; nsims=4, rng, z₀, progress=true, step=std(result.gs)/100, fdm=central_fdm(2,1,adapt=0))
 ncalls_muse = prob.ncalls[];
 
-chain_muse = Chains(permutedims(rand(result.dist,5_000)), [:logr, :logAϕ]);
-file_name=string("/pscratch/sd/j/jaimerz/chains/MUSE/CMBLensing",
+chain_muse = Chains(permutedims(rand(result.dist,50)), [:logr, :logAϕ]);
+file_name=string("/pscratch/sd/j/jaimerz/chains/test/CMBLensing",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
     "_precond_", use_precond,
     "_nsims_", nsims)
-@save string("/pscratch/sd/j/jaimerz/chains/MUSE/CMBLensing_masking_", masking, "_Nside_", Nside) chain_muse
+@save file_name chain_muse

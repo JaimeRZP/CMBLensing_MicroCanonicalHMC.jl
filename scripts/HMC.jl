@@ -11,8 +11,7 @@ Nside = 512
 T = Float64;
 masking = true
 global_parameters = true
-precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing
-file_path = 
+precond_path = "../chains/pixel_preconditioners/pp_nside_512_t_0.13" #nothing 
 println("Nside: ", Nside)
 println("Masking: ", masking)
 println("Global_parameters: ", global_parameters)
@@ -39,13 +38,13 @@ else
 end
 
 #Sampler
-ϵ=0.05
+ϵ=0.005
 Ω = prob.Ωstart
 samples_hmc = []
 rng = Xoshiro(1)
 prob.ncalls[] = 0
 
-iterations = 1_000
+iterations = 5
 @showprogress for i=1:iterations
     Ω, = state = hmc_step(rng, prob, prob.Ωstart, prob.Λmass; symp_kwargs=[(N=25, ϵ=ϵ)], progress=false, always_accept=(i<10))
     push!(samples_hmc, adapt(Array, state))
@@ -54,12 +53,11 @@ ncalls_hmc = prob.ncalls[]
 println("N_calls: ", ncalls_hmc)
 
 _samples_hmc = zeros(iterations, 3*Nside^2+2)
-for i in 1:1_000
+for i in 1:iterations
     _samples_hmc[i, :]  = samples_hmc[i][1][:]
 end
-_samples_hmc
 
-file_name=string("/pscratch/sd/j/jaimerz/chains/HMC/CMBLensing",
+file_name=string("/pscratch/sd/j/jaimerz/chains/test/CMBLensing",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
