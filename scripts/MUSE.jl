@@ -59,7 +59,7 @@ MuseInference.get_H!(result, muse_prob; nsims=4, rng, z₀, progress=true, step=
 ncalls_muse = prob.ncalls[];
 
 chain_muse = Chains(permutedims(rand(result.dist,50)), [:logr, :logAϕ]);
-file_name=string("/pscratch/sd/j/jaimerz/chains/test/CMBLensing",
+file_name=string("/pscratch/sd/j/jaimerz/chains/MUSE/MUSE",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
