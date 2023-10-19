@@ -38,6 +38,7 @@ end
 
 #Sampler
 ϵ=0.0025
+samples=100
 Ω = prob.Ωstart
 samples_hmc = []
 rng = Xoshiro(1)
@@ -49,7 +50,6 @@ deriv_precond.θ.r = 5.85
 deriv_precond.θ.Aϕ = 112.09
 Λmass_new = Diagonal(FieldTuple(f°=diag(new_f), ϕ°=diag(prob.Λmass[:ϕ°]), θ=deriv_precond.θ));
 
-iterations = 10_000
 @showprogress for i=1:iterations
     Ω, = state = hmc_step(rng, prob, prob.Ωstart, new_Λmass; symp_kwargs=[(N=25, ϵ=ϵ)], progress=false, always_accept=(i<10))
     push!(samples_hmc, adapt(Array, state))
@@ -57,12 +57,12 @@ end
 ncalls_hmc = prob.ncalls[]
 println("N_calls: ", ncalls_hmc)
 
-_samples_hmc = zeros(iterations, 3*Nside^2+2)
-for i in 1:iterations
+_samples_hmc = zeros(samples, 3*Nside^2+2)
+for i in 1:samples
     _samples_hmc[i, :]  = samples_hmc[i][1][:]
 end
 
-fol_name=string("/pscratch/sd/j/jaimerz/chains/HMC/HMC",
+fol_name=string("/mnt/extraspace/jaimerz/mchmc_chains/test/HMC",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,

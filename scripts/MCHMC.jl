@@ -42,7 +42,7 @@ target = CMBLensingTarget(prob);
 #Sampler
 TEV = 0.0001
 spl = MCHMC(100, TEV; adaptive=true, init_eps=30, init_L=500, sigma=precond);
-fol_name=string("/pscratch/sd/j/jaimerz/chains/test/MCHMC",
+fol_name=string("/mnt/extraspace/jaimerz/mchmc_chains/test/MCHMC",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
