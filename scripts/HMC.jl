@@ -62,7 +62,7 @@ for i in 1:iterations
     _samples_hmc[i, :]  = samples_hmc[i][1][:]
 end
 
-fol_name=string("/pscratch/sd/j/jaimerz/chains/HMC/HMC",
+fol_name=string("/pscratch/sd/j/jaimerz/chains/test/HMC",
     "_cosmo_", global_parameters,
     "_masking_", masking,
     "_Nside_", Nside,
