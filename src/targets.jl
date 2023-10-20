@@ -116,10 +116,13 @@ mutable struct CMBLensingTarget <: Target
     prior_draw::Function
 end
 
-CMBLensingTarget(prob; rng=0, kwargs...) = begin
+CMBLensingTarget(prob; rng=0, Λmass=nothing, kwargs...) = begin
     Ωstart = prob.Ωstart
     d = length(Ωstart)
-    Λmass = real(prob.Λmass)
+    if Λmass == nothing
+        println("using custom Λmass")
+        Λmass = real(prob.Λmass)
+    end
     sqrtΛmass = sqrt(Λmass)
     inv_sqrtΛmass = pinv(sqrtΛmass)
     rng = MersenneTwister(rng)
