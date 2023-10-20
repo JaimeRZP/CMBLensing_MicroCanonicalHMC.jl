@@ -120,7 +120,7 @@ CMBLensingTarget(prob; rng=0, Λmass=nothing, kwargs...) = begin
     Ωstart = prob.Ωstart
     d = length(Ωstart)
     if Λmass == nothing
-        println("using custom Λmass")
+        println("using prob.Λmass")
         Λmass = real(prob.Λmass)
     end
     sqrtΛmass = sqrt(Λmass)
